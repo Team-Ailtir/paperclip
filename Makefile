@@ -9,7 +9,7 @@ endef
 
 .PHONY: docker-init
 docker-init: ## Bootstrap the first admin user on the running paperclip instance
-	cd ../infrastructure && CMD="node --import ./server/node_modules/tsx/dist/loader.mjs node_modules/.bin/paperclipai auth bootstrap-ceo" make exec-paperclip
+	cd ../infrastructure && CMD="/app/cli/node_modules/.bin/tsx /app/cli/src/index.ts auth bootstrap-ceo --data-dir /paperclip --base-url https://paperclip.ailtir.ai" make exec-paperclip
 
 .PHONY: docker-build
 docker-build: ## Build the Docker image

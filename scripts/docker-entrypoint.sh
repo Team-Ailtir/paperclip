@@ -26,4 +26,31 @@ if [ "$changed" = "1" ]; then
     chown -R node:node /paperclip
 fi
 
+# Seed a minimal config so CLI commands work when running against an external DB.
+# The server ignores this file and reads env vars directly; the CLI needs it to
+# know the deployment mode and auth base URL before it can touch the DB.
+CONFIG_PATH=/paperclip/instances/default/config.json
+if [ ! -f "$CONFIG_PATH" ]; then
+    mkdir -p "$(dirname "$CONFIG_PATH")"
+    cat > "$CONFIG_PATH" << EOF
+{
+  "meta": { "version": 1 },
+  "server": {
+    "deploymentMode": "${PAPERCLIP_DEPLOYMENT_MODE:-authenticated}",
+    "exposure": "${PAPERCLIP_DEPLOYMENT_EXPOSURE:-public}",
+    "host": "0.0.0.0",
+    "port": ${PORT:-3100}
+  },
+  "auth": {
+    "baseUrlMode": "explicit",
+    "publicBaseUrl": "${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}"
+  },
+  "database": { "mode": "postgres", "connectionString": "${DATABASE_URL}" },
+  "storage": { "provider": "local_disk" },
+  "secrets": { "provider": "local_encrypted" }
+}
+EOF
+    chown node:node "$CONFIG_PATH"
+fi
+
 exec gosu node "$@"
