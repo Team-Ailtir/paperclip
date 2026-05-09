@@ -7,6 +7,10 @@ define get_aws_repo
   $(shell aws ecr describe-repositories | jq -r '.repositories[] | select(.repositoryName | startswith("$(GIT_REPO)-")) | .repositoryUri')
 endef
 
+.PHONY: docker-init
+docker-init: ## Bootstrap the first admin user on the running paperclip instance
+	cd ../infrastructure && CMD="node --import ./server/node_modules/tsx/dist/loader.mjs node_modules/.bin/paperclipai auth bootstrap-ceo" make exec-paperclip
+
 .PHONY: docker-build
 docker-build: ## Build the Docker image
 	docker build -t $(GIT_REPO) .
