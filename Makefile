@@ -8,8 +8,8 @@ define get_aws_repo
 endef
 
 .PHONY: docker-init
-docker-init: ## Bootstrap the first admin user on the running paperclip instance
-	cd ../infrastructure && CMD="/app/cli/node_modules/.bin/tsx /app/cli/src/index.ts auth bootstrap-ceo --data-dir /paperclip --base-url https://paperclip.ailtir.ai" make exec-paperclip
+docker-init: ## Bootstrap the first admin user on the running paperclip instance (prints invite URL)
+	scripts/docker-init.sh
 
 .PHONY: docker-build
 docker-build: ## Build the Docker image

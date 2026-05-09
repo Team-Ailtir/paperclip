@@ -22,8 +22,6 @@ if [ "$(id -g node)" -ne "$PGID" ]; then
     changed=1
 fi
 
-chown -R node:node /paperclip
-
 # Seed a minimal config so CLI commands work when running against an external DB.
 # The server ignores this file and reads env vars directly; the CLI needs it to
 # know the deployment mode and auth base URL before it can touch the DB.
@@ -51,7 +49,9 @@ cfg = {
 with open(sys.argv[1], 'w') as f:
     json.dump(cfg, f, indent=2)
 " "$CONFIG_PATH"
-    chown node:node "$CONFIG_PATH"
 fi
+
+# Fix ownership after all root writes are done.
+chown -R node:node /paperclip
 
 exec gosu node "$@"
