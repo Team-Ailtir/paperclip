@@ -30,16 +30,38 @@ if [ "$(id -g node)" -ne "$PGID" ]; then
     usermod -g "$PGID" node
 fi
 
-# Ensure the app home is owned by the runtime user BEFORE dropping
-# privileges -- not only after a UID/GID remap. A freshly mounted volume
-# (Docker named volume, Railway volume, Kubernetes PV) arrives root-owned
-# and shadows the image's build-time chown, so with the default UID the old
-# remap-only condition dropped privileges onto an unwritable home and the
-# server crashed on its first mkdir. The probe is a first-mismatch find
-# over the WHOLE tree (uid and gid): a root-owned mount or descendant
-# (init containers, backup restores, files written before a remap) is
-# found immediately and repaired recursively, a GID-only remap is caught,
-# and a fully-correct tree costs one metadata-only walk with no chown.
+# Seed a minimal config so CLI commands work when running against an external DB.
+# The server ignores this file and reads env vars directly; the CLI needs it to
+# know the deployment mode and auth base URL before it can touch the DB.
+CONFIG_PATH=/paperclip/instances/default/config.json
+if [ ! -f "$CONFIG_PATH" ]; then
+    mkdir -p "$(dirname "$CONFIG_PATH")"
+    python3 -c "
+import json, os, sys
+cfg = {
+    'meta': {'version': 1},
+    'server': {
+        'deploymentMode': os.environ.get('PAPERCLIP_DEPLOYMENT_MODE', 'authenticated'),
+        'exposure': os.environ.get('PAPERCLIP_DEPLOYMENT_EXPOSURE', 'public'),
+        'host': '0.0.0.0',
+        'port': int(os.environ.get('PORT', 3100)),
+    },
+    'auth': {
+        'baseUrlMode': 'explicit',
+        'publicBaseUrl': os.environ.get('PAPERCLIP_PUBLIC_URL', 'http://localhost:3100'),
+    },
+    'database': {'mode': 'postgres', 'connectionString': os.environ.get('DATABASE_URL', '')},
+    'storage': {'provider': 'local_disk'},
+    'secrets': {'provider': 'local_encrypted'},
+}
+with open(sys.argv[1], 'w') as f:
+    json.dump(cfg, f, indent=2)
+" "$CONFIG_PATH"
+fi
+
+# Ensure the app home is owned by the runtime user after all root writes are
+# done. A freshly mounted volume can shadow the image's build-time ownership;
+# checking for the first mismatch avoids an unnecessary recursive chown.
 home_dir="${PAPERCLIP_HOME:-/paperclip}"
 if [ -d "$home_dir" ] && [ -n "$(find "$home_dir" \( ! -user node -o ! -group node \) -print -quit 2>/dev/null)" ]; then
     chown -R node:node "$home_dir"

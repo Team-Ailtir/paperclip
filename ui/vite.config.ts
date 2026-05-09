@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   build: {
     minify: "esbuild",
+    chunkSizeWarningLimit: 5000,
   },
   esbuild:
     mode === "production"
