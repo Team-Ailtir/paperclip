@@ -30,24 +30,27 @@ chown -R node:node /paperclip
 CONFIG_PATH=/paperclip/instances/default/config.json
 if [ ! -f "$CONFIG_PATH" ]; then
     mkdir -p "$(dirname "$CONFIG_PATH")"
-    cat > "$CONFIG_PATH" << EOF
-{
-  "meta": { "version": 1 },
-  "server": {
-    "deploymentMode": "${PAPERCLIP_DEPLOYMENT_MODE:-authenticated}",
-    "exposure": "${PAPERCLIP_DEPLOYMENT_EXPOSURE:-public}",
-    "host": "0.0.0.0",
-    "port": ${PORT:-3100}
-  },
-  "auth": {
-    "baseUrlMode": "explicit",
-    "publicBaseUrl": "${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}"
-  },
-  "database": { "mode": "postgres", "connectionString": "${DATABASE_URL}" },
-  "storage": { "provider": "local_disk" },
-  "secrets": { "provider": "local_encrypted" }
+    python3 -c "
+import json, os, sys
+cfg = {
+    'meta': {'version': 1},
+    'server': {
+        'deploymentMode': os.environ.get('PAPERCLIP_DEPLOYMENT_MODE', 'authenticated'),
+        'exposure': os.environ.get('PAPERCLIP_DEPLOYMENT_EXPOSURE', 'public'),
+        'host': '0.0.0.0',
+        'port': int(os.environ.get('PORT', 3100)),
+    },
+    'auth': {
+        'baseUrlMode': 'explicit',
+        'publicBaseUrl': os.environ.get('PAPERCLIP_PUBLIC_URL', 'http://localhost:3100'),
+    },
+    'database': {'mode': 'postgres', 'connectionString': os.environ.get('DATABASE_URL', '')},
+    'storage': {'provider': 'local_disk'},
+    'secrets': {'provider': 'local_encrypted'},
 }
-EOF
+with open(sys.argv[1], 'w') as f:
+    json.dump(cfg, f, indent=2)
+" "$CONFIG_PATH"
     chown node:node "$CONFIG_PATH"
 fi
 
