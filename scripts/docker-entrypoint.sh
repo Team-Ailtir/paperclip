@@ -22,9 +22,7 @@ if [ "$(id -g node)" -ne "$PGID" ]; then
     changed=1
 fi
 
-if [ "$changed" = "1" ]; then
-    chown -R node:node /paperclip
-fi
+chown -R node:node /paperclip
 
 # Seed a minimal config so CLI commands work when running against an external DB.
 # The server ignores this file and reads env vars directly; the CLI needs it to
