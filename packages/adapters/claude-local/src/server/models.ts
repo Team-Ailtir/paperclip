@@ -7,13 +7,24 @@ const ANTHROPIC_MODELS_TIMEOUT_MS = 5000;
 const ANTHROPIC_MODELS_CACHE_TTL_MS = 60_000;
 const ANTHROPIC_API_VERSION = "2023-06-01";
 
+function bedrockRegionPrefix(): string {
+  const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
+  if (region.startsWith("eu-")) return "eu";
+  if (region.startsWith("ap-")) return "ap";
+  return "us";
+}
+
 /** AWS Bedrock model IDs — region-qualified identifiers required by the Bedrock API. */
-const BEDROCK_MODELS: AdapterModel[] = [
-  { id: "us.anthropic.claude-opus-4-8-v1", label: "Bedrock Opus 4.8" },
-  { id: "us.anthropic.claude-opus-4-6-v1", label: "Bedrock Opus 4.6" },
-  { id: "us.anthropic.claude-sonnet-4-5-20250929-v2:0", label: "Bedrock Sonnet 4.5" },
-  { id: "us.anthropic.claude-haiku-4-5-20251001-v1:0", label: "Bedrock Haiku 4.5" },
-];
+function buildBedrockModels(): AdapterModel[] {
+  const p = bedrockRegionPrefix();
+  return [
+    { id: `${p}.anthropic.claude-opus-4-8-v1`, label: "Bedrock Opus 4.8" },
+    { id: `${p}.anthropic.claude-opus-4-6-v1`, label: "Bedrock Opus 4.6" },
+    { id: `${p}.anthropic.claude-sonnet-4-6`, label: "Bedrock Sonnet 4.6" },
+    { id: `${p}.anthropic.claude-sonnet-4-5-20250929-v2:0`, label: "Bedrock Sonnet 4.5" },
+    { id: `${p}.anthropic.claude-haiku-4-5-20251001-v1:0`, label: "Bedrock Haiku 4.5" },
+  ];
+}
 
 let cached: { keyFingerprint: string; baseUrl: string; expiresAt: number; models: AdapterModel[] } | null = null;
 
@@ -101,7 +112,7 @@ async function fetchAnthropicModels(apiKey: string, baseUrl: string): Promise<Ad
 }
 
 async function loadClaudeModels(options?: { forceRefresh?: boolean }): Promise<AdapterModel[]> {
-  if (isBedrockEnv()) return dedupeModels(BEDROCK_MODELS);
+  if (isBedrockEnv()) return dedupeModels(buildBedrockModels());
 
   const fallback = dedupeModels(DIRECT_MODELS);
   const apiKey = resolveAnthropicApiKey();
