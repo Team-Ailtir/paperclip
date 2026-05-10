@@ -11,8 +11,17 @@ endef
 docker-init: ## Bootstrap the first admin user on the running paperclip instance (prints invite URL)
 	scripts/docker-init.sh
 
+.PHONY: nothing-to-commit
+nothing-to-commit: ## Fail if the working tree has uncommitted changes
+	@git diff --quiet && git diff --cached --quiet || (echo "Error: working tree is not clean. Commit or stash changes before building."; exit 1)
+	@test -z "$$(git status --porcelain)" || (echo "Error: untracked files present. Commit or stash before building."; exit 1)
+
+.PHONY: version-stamp
+version-stamp: ## Stamp package.json files with <version>-<git-sha>
+	scripts/version-stamp.sh
+
 .PHONY: docker-build
-docker-build: ## Build the Docker image
+docker-build: nothing-to-commit version-stamp ## Build the Docker image
 	docker build -t $(GIT_REPO) .
 	docker tag $(GIT_REPO):latest $(GIT_REPO):$(GIT_SHA)
 
