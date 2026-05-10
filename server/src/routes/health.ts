@@ -156,6 +156,7 @@ export function healthRoutes(
     if (!exposeFullDetails) {
       res.json({
         status: "ok",
+        version: serverVersion,
         deploymentMode: opts.deploymentMode,
         deploymentExposure: opts.deploymentExposure,
         bootstrapStatus,
