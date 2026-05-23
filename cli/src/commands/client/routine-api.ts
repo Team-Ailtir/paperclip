@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import {
   addCommonClientOptions,
+  apiPath,
   handleCommandError,
   printOutput,
   resolveCommandContext,
@@ -29,7 +30,7 @@ export function registerRoutineApiCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const query = opts.projectId ? `?${new URLSearchParams({ projectId: opts.projectId }).toString()}` : "";
-          printOutput(await ctx.api.get(`/api/companies/${ctx.companyId}/routines${query}`), { json: ctx.json });
+          printOutput(await ctx.api.get(`${apiPath`/api/companies/${ctx.companyId}/routines`}${query}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -49,7 +50,7 @@ export function registerRoutineApiCommands(program: Command): void {
       .action(async (routineId: string, revisionId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.post(`/api/routines/${routineId}/revisions/${revisionId}/restore`, {}), { json: ctx.json });
+          printOutput(await ctx.api.post(apiPath`/api/routines/${routineId}/revisions/${revisionId}/restore`, {}), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -65,7 +66,7 @@ export function registerRoutineApiCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const query = opts.limit ? `?${new URLSearchParams({ limit: opts.limit }).toString()}` : "";
-          printOutput(await ctx.api.get(`/api/routines/${routineId}/runs${query}`), { json: ctx.json });
+          printOutput(await ctx.api.get(`${apiPath`/api/routines/${routineId}/runs`}${query}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -85,7 +86,7 @@ export function registerRoutineApiCommands(program: Command): void {
       .action(async (publicId: string, opts: JsonOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.post(`/api/routine-triggers/public/${publicId}/fire`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+          printOutput(await ctx.api.post(apiPath`/api/routine-triggers/public/${publicId}/fire`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -97,7 +98,7 @@ function addCompanyPost(parent: Command, name: string, description: string, path
   addCommonClientOptions(parent.command(name).description(description).option("-C, --company-id <id>", "Company ID").requiredOption("--payload-json <json>", "JSON payload").action(async (opts: JsonOptions) => {
     try {
       const ctx = resolveCommandContext(opts, { requireCompany: true });
-      printOutput(await ctx.api.post(`/api/companies/${ctx.companyId}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+      printOutput(await ctx.api.post(`${apiPath`/api/companies/${ctx.companyId}`}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
     } catch (err) {
       handleCommandError(err);
     }
@@ -108,7 +109,7 @@ function addIdGet(parent: Command, name: string, description: string, resource: 
   addCommonClientOptions(parent.command(name).description(description).argument("<id>", "ID").action(async (id: string, opts: BaseClientOptions) => {
     try {
       const ctx = resolveCommandContext(opts);
-      printOutput(await ctx.api.get(`/api/${resource}/${id}${suffix ? `/${suffix}` : ""}`), { json: ctx.json });
+      printOutput(await ctx.api.get(`/api/${resource}/${encodeURIComponent(id)}${suffix ? `/${suffix}` : ""}`), { json: ctx.json });
     } catch (err) {
       handleCommandError(err);
     }
@@ -119,7 +120,7 @@ function addIdPatch(parent: Command, name: string, description: string, resource
   addCommonClientOptions(parent.command(name).description(description).argument("<id>", "ID").requiredOption("--payload-json <json>", "JSON payload").action(async (id: string, opts: JsonOptions) => {
     try {
       const ctx = resolveCommandContext(opts);
-      printOutput(await ctx.api.patch(`/api/${resource}/${id}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+      printOutput(await ctx.api.patch(`/api/${resource}/${encodeURIComponent(id)}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
     } catch (err) {
       handleCommandError(err);
     }
@@ -130,7 +131,7 @@ function addIdPost(parent: Command, name: string, description: string, resource:
   addCommonClientOptions(parent.command(name).description(description).argument("<id>", "ID").option("--payload-json <json>", "JSON payload", "{}").action(async (id: string, opts: JsonOptions) => {
     try {
       const ctx = resolveCommandContext(opts);
-      printOutput(await ctx.api.post(`/api/${resource}/${id}/${suffix}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+      printOutput(await ctx.api.post(`/api/${resource}/${encodeURIComponent(id)}/${suffix}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
     } catch (err) {
       handleCommandError(err);
     }
@@ -141,7 +142,7 @@ function addIdDelete(parent: Command, name: string, description: string, resourc
   addCommonClientOptions(parent.command(name).description(description).argument("<id>", "ID").action(async (id: string, opts: BaseClientOptions) => {
     try {
       const ctx = resolveCommandContext(opts);
-      printOutput(await ctx.api.delete(`/api/${resource}/${id}`), { json: ctx.json });
+      printOutput(await ctx.api.delete(`/api/${resource}/${encodeURIComponent(id)}`), { json: ctx.json });
     } catch (err) {
       handleCommandError(err);
     }

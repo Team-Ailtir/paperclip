@@ -8,6 +8,7 @@ import { PaperclipApiClient } from "../../client/http.js";
 import { resolveProfile, readContext, setCurrentProfile, upsertProfile } from "../../client/context.js";
 import {
   addCommonClientOptions,
+  apiPath,
   handleCommandError,
   normalizeApiBase,
   printOutput,
@@ -123,11 +124,11 @@ async function connectWizard(opts: ConnectOptions) {
     optional: false,
   });
   if (!company) throw new Error("Company is required for agent profiles");
-  const agents = (await boardApi.get<Agent[]>(`/api/companies/${company.id}/agents`)) ?? [];
+  const agents = (await boardApi.get<Agent[]>(apiPath`/api/companies/${company.id}/agents`)) ?? [];
   if (agents.length === 0) throw new Error(`Company '${company.name}' has no agents to connect.`);
   const agent = await chooseAgent(agents, resolvedProfile.profile.agentId);
   const tokenName = opts.tokenName?.trim() || `cli-agent-${new Date().toISOString()}`;
-  const key = await boardApi.post<CreatedAgentKey>(`/api/agents/${agent.id}/keys`, createAgentKeySchema.parse({ name: tokenName }));
+  const key = await boardApi.post<CreatedAgentKey>(apiPath`/api/agents/${agent.id}/keys`, createAgentKeySchema.parse({ name: tokenName }));
   if (!key) throw new Error("Failed to create agent token");
   upsertProfile(profileName, {
     apiBase,

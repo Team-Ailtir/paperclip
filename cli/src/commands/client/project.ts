@@ -3,6 +3,7 @@ import type { Project } from "@paperclipai/shared";
 import { createProjectSchema, updateProjectSchema } from "@paperclipai/shared";
 import {
   addCommonClientOptions,
+  apiPath,
   formatInlineRecord,
   handleCommandError,
   printOutput,
@@ -57,7 +58,7 @@ export function registerProjectCommands(program: Command): void {
       .action(async (opts: ProjectListOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          const rows = (await ctx.api.get<Project[]>(`/api/companies/${ctx.companyId}/projects`)) ?? [];
+          const rows = (await ctx.api.get<Project[]>(apiPath`/api/companies/${ctx.companyId}/projects`)) ?? [];
           if (ctx.json) {
             printOutput(rows, { json: true });
             return;
@@ -93,7 +94,7 @@ export function registerProjectCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const query = ctx.companyId ? `?${new URLSearchParams({ companyId: ctx.companyId }).toString()}` : "";
-          const row = await ctx.api.get<Project>(`/api/projects/${encodeURIComponent(projectRef)}${query}`);
+          const row = await ctx.api.get<Project>(`${apiPath`/api/projects/${projectRef}`}${query}`);
           printOutput(row, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -132,7 +133,7 @@ export function registerProjectCommands(program: Command): void {
             env: parseOptionalJson(opts.envJson),
             executionWorkspacePolicy: parseOptionalJson(opts.executionWorkspacePolicyJson),
           });
-          const created = await ctx.api.post<Project>(`/api/companies/${ctx.companyId}/projects`, payload);
+          const created = await ctx.api.post<Project>(apiPath`/api/companies/${ctx.companyId}/projects`, payload);
           printOutput(created, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -175,7 +176,7 @@ export function registerProjectCommands(program: Command): void {
             archivedAt: parseNullableString(opts.archivedAt),
           });
           const query = ctx.companyId ? `?${new URLSearchParams({ companyId: ctx.companyId }).toString()}` : "";
-          const updated = await ctx.api.patch<Project>(`/api/projects/${encodeURIComponent(projectRef)}${query}`, payload);
+          const updated = await ctx.api.patch<Project>(`${apiPath`/api/projects/${projectRef}`}${query}`, payload);
           printOutput(updated, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -196,7 +197,7 @@ export function registerProjectCommands(program: Command): void {
           if (!opts.yes) throw new Error("Deletion requires --yes.");
           const ctx = resolveCommandContext(opts);
           const query = ctx.companyId ? `?${new URLSearchParams({ companyId: ctx.companyId }).toString()}` : "";
-          const deleted = await ctx.api.delete<Project>(`/api/projects/${encodeURIComponent(projectRef)}${query}`);
+          const deleted = await ctx.api.delete<Project>(`${apiPath`/api/projects/${projectRef}`}${query}`);
           printOutput(deleted, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);

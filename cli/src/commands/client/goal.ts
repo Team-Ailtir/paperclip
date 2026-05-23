@@ -3,6 +3,7 @@ import type { Goal } from "@paperclipai/shared";
 import { createGoalSchema, updateGoalSchema } from "@paperclipai/shared";
 import {
   addCommonClientOptions,
+  apiPath,
   formatInlineRecord,
   handleCommandError,
   printOutput,
@@ -48,7 +49,7 @@ export function registerGoalCommands(program: Command): void {
       .action(async (opts: GoalListOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          const rows = (await ctx.api.get<Goal[]>(`/api/companies/${ctx.companyId}/goals`)) ?? [];
+          const rows = (await ctx.api.get<Goal[]>(apiPath`/api/companies/${ctx.companyId}/goals`)) ?? [];
           if (ctx.json) {
             printOutput(rows, { json: true });
             return;
@@ -82,7 +83,7 @@ export function registerGoalCommands(program: Command): void {
       .action(async (goalId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const row = await ctx.api.get<Goal>(`/api/goals/${goalId}`);
+          const row = await ctx.api.get<Goal>(apiPath`/api/goals/${goalId}`);
           printOutput(row, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -112,7 +113,7 @@ export function registerGoalCommands(program: Command): void {
             parentId: parseNullableString(opts.parentId),
             ownerAgentId: parseNullableString(opts.ownerAgentId),
           });
-          const created = await ctx.api.post<Goal>(`/api/companies/${ctx.companyId}/goals`, payload);
+          const created = await ctx.api.post<Goal>(apiPath`/api/companies/${ctx.companyId}/goals`, payload);
           printOutput(created, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -143,7 +144,7 @@ export function registerGoalCommands(program: Command): void {
             parentId: parseNullableString(opts.parentId),
             ownerAgentId: parseNullableString(opts.ownerAgentId),
           });
-          const updated = await ctx.api.patch<Goal>(`/api/goals/${goalId}`, payload);
+          const updated = await ctx.api.patch<Goal>(apiPath`/api/goals/${goalId}`, payload);
           printOutput(updated, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -161,7 +162,7 @@ export function registerGoalCommands(program: Command): void {
         try {
           if (!opts.yes) throw new Error("Deletion requires --yes.");
           const ctx = resolveCommandContext(opts);
-          const deleted = await ctx.api.delete<Goal>(`/api/goals/${goalId}`);
+          const deleted = await ctx.api.delete<Goal>(apiPath`/api/goals/${goalId}`);
           printOutput(deleted, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);

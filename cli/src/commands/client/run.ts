@@ -2,6 +2,7 @@ import { Command } from "commander";
 import type { HeartbeatRun, HeartbeatRunEvent, Issue, WorkspaceOperation } from "@paperclipai/shared";
 import {
   addCommonClientOptions,
+  apiPath,
   formatInlineRecord,
   handleCommandError,
   printOutput,
@@ -58,7 +59,7 @@ export function registerRunCommands(command: Command): void {
           if (opts.limit) params.set("limit", opts.limit);
           const query = params.toString();
           const rows = (await ctx.api.get<HeartbeatRun[]>(
-            `/api/companies/${ctx.companyId}/heartbeat-runs${query ? `?${query}` : ""}`,
+            `${apiPath`/api/companies/${ctx.companyId}/heartbeat-runs`}${query ? `?${query}` : ""}`,
           )) ?? [];
           printRuns(rows, ctx.json);
         } catch (err) {
@@ -83,7 +84,7 @@ export function registerRunCommands(command: Command): void {
           if (opts.minCount) params.set("minCount", opts.minCount);
           const query = params.toString();
           const rows = (await ctx.api.get<HeartbeatRun[]>(
-            `/api/companies/${ctx.companyId}/live-runs${query ? `?${query}` : ""}`,
+            `${apiPath`/api/companies/${ctx.companyId}/live-runs`}${query ? `?${query}` : ""}`,
           )) ?? [];
           printRuns(rows, ctx.json);
         } catch (err) {
@@ -101,7 +102,7 @@ export function registerRunCommands(command: Command): void {
       .action(async (runId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const run = await ctx.api.get<HeartbeatRun>(`/api/heartbeat-runs/${runId}`);
+          const run = await ctx.api.get<HeartbeatRun>(apiPath`/api/heartbeat-runs/${runId}`);
           printOutput(run, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -117,7 +118,7 @@ export function registerRunCommands(command: Command): void {
       .action(async (runId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const run = await ctx.api.post<HeartbeatRun | null>(`/api/heartbeat-runs/${runId}/cancel`, {});
+          const run = await ctx.api.post<HeartbeatRun | null>(apiPath`/api/heartbeat-runs/${runId}/cancel`, {});
           printOutput(run, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -139,7 +140,7 @@ export function registerRunCommands(command: Command): void {
           if (opts.afterSeq) params.set("afterSeq", opts.afterSeq);
           if (opts.limit) params.set("limit", opts.limit);
           const events = (await ctx.api.get<HeartbeatRunEvent[]>(
-            `/api/heartbeat-runs/${runId}/events?${params.toString()}`,
+            `${apiPath`/api/heartbeat-runs/${runId}/events`}?${params.toString()}`,
           )) ?? [];
           if (ctx.json) {
             printOutput(events, { json: true });
@@ -172,7 +173,7 @@ export function registerRunCommands(command: Command): void {
       .action(async (runId: string, opts: RunLogOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await fetchLog(ctx.api, `/api/heartbeat-runs/${runId}/log`, opts);
+          const result = await fetchLog(ctx.api, apiPath`/api/heartbeat-runs/${runId}/log`, opts);
           printLogResult(result, { json: ctx.json, text: opts.text });
         } catch (err) {
           handleCommandError(err);
@@ -188,7 +189,7 @@ export function registerRunCommands(command: Command): void {
       .action(async (runId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const rows = (await ctx.api.get<RunIssueSummary[]>(`/api/heartbeat-runs/${runId}/issues`)) ?? [];
+          const rows = (await ctx.api.get<RunIssueSummary[]>(apiPath`/api/heartbeat-runs/${runId}/issues`)) ?? [];
           printOutput(rows.map((row) => ({
             identifier: row.identifier,
             id: row.id,
@@ -212,7 +213,7 @@ export function registerRunCommands(command: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const rows = (await ctx.api.get<WorkspaceOperation[]>(
-            `/api/heartbeat-runs/${runId}/workspace-operations`,
+            apiPath`/api/heartbeat-runs/${runId}/workspace-operations`,
           )) ?? [];
           printOutput(rows.map((row) => ({
             id: row.id,
@@ -239,7 +240,7 @@ export function registerRunCommands(command: Command): void {
       .action(async (operationId: string, opts: RunLogOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await fetchLog(ctx.api, `/api/workspace-operations/${operationId}/log`, opts);
+          const result = await fetchLog(ctx.api, apiPath`/api/workspace-operations/${operationId}/log`, opts);
           printLogResult(result, { json: ctx.json, text: opts.text });
         } catch (err) {
           handleCommandError(err);
@@ -259,7 +260,7 @@ export function registerRunCommands(command: Command): void {
       .action(async (runId: string, opts: RunWatchdogOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const decision = await ctx.api.post(`/api/heartbeat-runs/${runId}/watchdog-decisions`, {
+          const decision = await ctx.api.post(apiPath`/api/heartbeat-runs/${runId}/watchdog-decisions`, {
             decision: opts.decision,
             reason: opts.reason,
             snoozedUntil: opts.snoozedUntil,

@@ -13,6 +13,7 @@ import type {
 } from "@paperclipai/shared";
 import {
   addCommonClientOptions,
+  apiPath,
   formatInlineRecord,
   handleCommandError,
   printOutput,
@@ -268,8 +269,8 @@ function asStringArray(value: unknown): string[] {
 async function migrateInlineEnv(opts: SecretMigrateInlineEnvOptions): Promise<void> {
   const ctx = resolveCommandContext(opts, { requireCompany: true });
   const companyId = ctx.companyId!;
-  const agents = (await ctx.api.get<Agent[]>(`/api/companies/${companyId}/agents`)) ?? [];
-  const secrets = (await ctx.api.get<CompanySecret[]>(`/api/companies/${companyId}/secrets`)) ?? [];
+  const agents = (await ctx.api.get<Agent[]>(apiPath`/api/companies/${companyId}/agents`)) ?? [];
+  const secrets = (await ctx.api.get<CompanySecret[]>(apiPath`/api/companies/${companyId}/secrets`)) ?? [];
   const candidates = collectInlineSecretMigrationCandidates(agents, secrets);
 
   if (!opts.apply) {
@@ -300,13 +301,13 @@ async function migrateInlineEnv(opts: SecretMigrateInlineEnvOptions): Promise<vo
     if (!value) continue;
 
     if (candidate.existingSecretId) {
-      await ctx.api.post(`/api/secrets/${candidate.existingSecretId}/rotate`, { value });
+      await ctx.api.post(apiPath`/api/secrets/${candidate.existingSecretId}/rotate`, { value });
       createdOrRotated.set(`${candidate.agentId}:${candidate.envKey}`, candidate.existingSecretId);
       rotatedSecrets += 1;
       continue;
     }
 
-    const created = await ctx.api.post<CompanySecret>(`/api/companies/${companyId}/secrets`, {
+    const created = await ctx.api.post<CompanySecret>(apiPath`/api/companies/${companyId}/secrets`, {
       name: candidate.secretName,
       provider: "local_encrypted",
       value,
@@ -331,7 +332,7 @@ async function migrateInlineEnv(opts: SecretMigrateInlineEnvOptions): Promise<vo
       ...agent.adapterConfig,
       env: buildMigratedAgentEnv(env, secretIdByEnvKey),
     };
-    await ctx.api.patch(`/api/agents/${agent.id}`, {
+    await ctx.api.patch(apiPath`/api/agents/${agent.id}`, {
       adapterConfig,
       replaceAdapterConfig: true,
     });
@@ -360,7 +361,7 @@ export function registerSecretCommands(program: Command): void {
       .action(async (opts: SecretListOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          const rows = (await ctx.api.get<CompanySecret[]>(`/api/companies/${ctx.companyId}/secrets`)) ?? [];
+          const rows = (await ctx.api.get<CompanySecret[]>(apiPath`/api/companies/${ctx.companyId}/secrets`)) ?? [];
           printOutput(ctx.json ? rows : rows.map(renderSecret), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -383,7 +384,7 @@ export function registerSecretCommands(program: Command): void {
             throw new Error("Invalid --kind value. Use: all, secret, plain");
           }
           const preview = await ctx.api.post<CompanyPortabilityExportPreviewResult>(
-            `/api/companies/${ctx.companyId}/exports/preview`,
+            apiPath`/api/companies/${ctx.companyId}/exports/preview`,
             { include: parseSecretsInclude(opts.include) },
           );
           const declarations = (preview?.manifest.envInputs ?? [])
@@ -409,7 +410,7 @@ export function registerSecretCommands(program: Command): void {
       .action(async (opts: SecretCreateOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          const created = await ctx.api.post<CompanySecret>(`/api/companies/${ctx.companyId}/secrets`, {
+          const created = await ctx.api.post<CompanySecret>(apiPath`/api/companies/${ctx.companyId}/secrets`, {
             name: opts.name,
             key: opts.key,
             provider: opts.provider,
@@ -437,7 +438,7 @@ export function registerSecretCommands(program: Command): void {
       .action(async (opts: SecretLinkOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          const created = await ctx.api.post<CompanySecret>(`/api/companies/${ctx.companyId}/secrets`, {
+          const created = await ctx.api.post<CompanySecret>(apiPath`/api/companies/${ctx.companyId}/secrets`, {
             name: opts.name,
             key: opts.key,
             provider: opts.provider,
@@ -462,7 +463,7 @@ export function registerSecretCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const health = await ctx.api.get<SecretProviderHealthResponse>(
-            `/api/companies/${ctx.companyId}/secret-providers/health`,
+            apiPath`/api/companies/${ctx.companyId}/secret-providers/health`,
           );
           printProviderHealth(health?.providers ?? [], ctx.json);
         } catch (err) {
@@ -480,7 +481,7 @@ export function registerSecretCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const rows = (await ctx.api.get<SecretProviderDescriptor[]>(
-            `/api/companies/${ctx.companyId}/secret-providers`,
+            apiPath`/api/companies/${ctx.companyId}/secret-providers`,
           )) ?? [];
           printOutput(rows, { json: ctx.json });
         } catch (err) {
@@ -497,7 +498,7 @@ export function registerSecretCommands(program: Command): void {
       .action(async (opts: SecretDoctorOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          printOutput(await ctx.api.get(`/api/companies/${ctx.companyId}/secret-provider-configs`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/companies/${ctx.companyId}/secret-provider-configs`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -545,7 +546,7 @@ function addCompanySecretJsonPost(parent: Command, name: string, description: st
       .action(async (opts: SecretJsonOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          printOutput(await ctx.api.post(`/api/companies/${ctx.companyId}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+          printOutput(await ctx.api.post(`${apiPath`/api/companies/${ctx.companyId}`}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -562,7 +563,7 @@ function addSecretProviderConfigGet(parent: Command, name: string, description: 
       .action(async (configId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/secret-provider-configs/${configId}${suffix ? `/${suffix}` : ""}`), { json: ctx.json });
+          printOutput(await ctx.api.get(`${apiPath`/api/secret-provider-configs/${configId}`}${suffix ? `/${suffix}` : ""}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -580,7 +581,7 @@ function addSecretProviderConfigPatch(parent: Command, name: string, description
       .action(async (configId: string, opts: SecretJsonOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.patch(`/api/secret-provider-configs/${configId}${suffix ? `/${suffix}` : ""}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+          printOutput(await ctx.api.patch(`${apiPath`/api/secret-provider-configs/${configId}`}${suffix ? `/${suffix}` : ""}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -597,7 +598,7 @@ function addSecretProviderConfigPost(parent: Command, name: string, description:
       .action(async (configId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.post(`/api/secret-provider-configs/${configId}/${suffix}`, {}), { json: ctx.json });
+          printOutput(await ctx.api.post(`${apiPath`/api/secret-provider-configs/${configId}`}/${suffix}`, {}), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -614,7 +615,7 @@ function addSecretProviderConfigDelete(parent: Command, name: string, descriptio
       .action(async (configId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.delete(`/api/secret-provider-configs/${configId}`), { json: ctx.json });
+          printOutput(await ctx.api.delete(apiPath`/api/secret-provider-configs/${configId}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }

@@ -46,6 +46,21 @@ describe("issue subresource commands", () => {
     vi.restoreAllMocks();
   });
 
+  it("wraps core issue get, update, and delete endpoints", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse()));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await run(["issue", "get", ISSUE_ID]);
+    await run(["issue", "update", ISSUE_ID, "--title", "New title"]);
+    await run(["issue", "delete", ISSUE_ID, "--yes"]);
+
+    expect(fetchMock.mock.calls.map((call) => [call[1]?.method ?? "GET", call[0]])).toEqual([
+      ["GET", `http://localhost:3100/api/issues/${ISSUE_ID}`],
+      ["PATCH", `http://localhost:3100/api/issues/${ISSUE_ID}`],
+      ["DELETE", `http://localhost:3100/api/issues/${ISSUE_ID}`],
+    ]);
+  });
+
   it("wraps comments, approvals, markers, and recovery action endpoints", async () => {
     const fetchMock = vi
       .fn()

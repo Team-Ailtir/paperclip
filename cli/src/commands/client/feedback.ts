@@ -5,6 +5,7 @@ import { Command } from "commander";
 import type { Company, FeedbackTrace, FeedbackTraceBundle } from "@paperclipai/shared";
 import {
   addCommonClientOptions,
+  apiPath,
   handleCommandError,
   printOutput,
   resolveCommandContext,
@@ -176,7 +177,7 @@ export function registerFeedbackCommands(program: Command): void {
       .action(async (traceId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/feedback-traces/${traceId}`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/feedback-traces/${traceId}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -191,7 +192,7 @@ export function registerFeedbackCommands(program: Command): void {
       .action(async (traceId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/feedback-traces/${traceId}/bundle`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/feedback-traces/${traceId}/bundle`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -250,7 +251,7 @@ export async function fetchCompanyFeedbackTraces(
 ): Promise<FeedbackTrace[]> {
   return (
     (await ctx.api.get<FeedbackTrace[]>(
-      `/api/companies/${companyId}/feedback-traces${buildFeedbackTraceQuery(opts, true)}`,
+      `${apiPath`/api/companies/${companyId}/feedback-traces`}${buildFeedbackTraceQuery(opts, true)}`,
     )) ?? []
   );
 }
@@ -259,7 +260,7 @@ export async function fetchFeedbackTraceBundle(
   ctx: ResolvedClientContext,
   traceId: string,
 ): Promise<FeedbackTraceBundle> {
-  const bundle = await ctx.api.get<FeedbackTraceBundle>(`/api/feedback-traces/${traceId}/bundle`);
+  const bundle = await ctx.api.get<FeedbackTraceBundle>(apiPath`/api/feedback-traces/${traceId}/bundle`);
   if (!bundle) {
     throw new Error(`Feedback trace bundle ${traceId} not found`);
   }

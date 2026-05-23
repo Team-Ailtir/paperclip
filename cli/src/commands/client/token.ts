@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { createAgentKeySchema, createBoardApiKeySchema, type Agent } from "@paperclipai/shared";
 import {
   addCommonClientOptions,
+  apiPath,
   formatInlineRecord,
   handleCommandError,
   printOutput,
@@ -73,7 +74,7 @@ export function registerTokenCommands(program: Command): void {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const agentRow = await resolveAgent(ctx.api, ctx.companyId ?? "", opts.agent ?? "");
           const payload = createAgentKeySchema.parse({ name: opts.name });
-          const key = await ctx.api.post<CreatedAgentKey>(`/api/agents/${agentRow.id}/keys`, payload);
+          const key = await ctx.api.post<CreatedAgentKey>(apiPath`/api/agents/${agentRow.id}/keys`, payload);
           if (!key) throw new Error("Failed to create agent API key");
           printOutput(
             {
@@ -101,7 +102,7 @@ export function registerTokenCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const agentRow = await resolveAgent(ctx.api, ctx.companyId ?? "", opts.agent ?? "");
-          const keys = (await ctx.api.get<AgentKeyRow[]>(`/api/agents/${agentRow.id}/keys`)) ?? [];
+          const keys = (await ctx.api.get<AgentKeyRow[]>(apiPath`/api/agents/${agentRow.id}/keys`)) ?? [];
           if (ctx.json) {
             printOutput({ agentId: agentRow.id, companyId: agentRow.companyId, keys }, { json: true });
             return;
@@ -128,7 +129,7 @@ export function registerTokenCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const agentRow = await resolveAgent(ctx.api, ctx.companyId ?? "", opts.agent ?? "");
-          const result = await ctx.api.delete<{ ok: true; keyId?: string }>(`/api/agents/${agentRow.id}/keys/${keyId}`);
+          const result = await ctx.api.delete<{ ok: true; keyId?: string }>(apiPath`/api/agents/${agentRow.id}/keys/${keyId}`);
           printOutput({ ok: true, agentId: agentRow.id, companyId: agentRow.companyId, ...(result ?? {}) }, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -204,7 +205,7 @@ export function registerTokenCommands(program: Command): void {
       .action(async (keyId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.delete<{ ok: true; keyId: string }>(`/api/board-api-keys/${keyId}`);
+          const result = await ctx.api.delete<{ ok: true; keyId: string }>(apiPath`/api/board-api-keys/${keyId}`);
           printOutput(result ?? { ok: true, keyId }, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -217,7 +218,7 @@ async function resolveAgent(api: { get<T>(path: string): Promise<T | null> }, co
   const trimmed = agentRef.trim();
   if (!trimmed) throw new Error("Agent reference is required");
   const query = new URLSearchParams({ companyId });
-  const agent = await api.get<Agent>(`/api/agents/${encodeURIComponent(trimmed)}?${query.toString()}`);
+  const agent = await api.get<Agent>(`${apiPath`/api/agents/${trimmed}`}?${query.toString()}`);
   if (!agent) throw new Error(`Agent not found: ${agentRef}`);
   return agent;
 }

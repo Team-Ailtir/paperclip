@@ -229,7 +229,7 @@ export function registerIssueCommands(program: Command): void {
       .action(async (idOrIdentifier: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const row = await ctx.api.get<Issue>(apiPath`/api/issues/`);
+          const row = await ctx.api.get<Issue>(apiPath`/api/issues/${idOrIdentifier}`);
           printOutput(row, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -247,7 +247,7 @@ export function registerIssueCommands(program: Command): void {
         try {
           if (!opts.yes) throw new Error("Refusing to delete without --yes");
           const ctx = resolveCommandContext(opts);
-          const deleted = await ctx.api.delete<Issue>(apiPath`/api/issues/`);
+          const deleted = await ctx.api.delete<Issue>(apiPath`/api/issues/${issueId}`);
           printOutput(deleted, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -346,7 +346,7 @@ export function registerIssueCommands(program: Command): void {
             hiddenAt: parseHiddenAt(opts.hiddenAt),
           });
 
-          const updated = await ctx.api.patch<Issue & { comment?: IssueComment | null }>(apiPath`/api/issues/`, payload);
+          const updated = await ctx.api.patch<Issue & { comment?: IssueComment | null }>(apiPath`/api/issues/${issueId}`, payload);
           printOutput(updated, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);

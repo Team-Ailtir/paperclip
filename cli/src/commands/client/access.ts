@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import {
   addCommonClientOptions,
+  apiPath,
   handleCommandError,
   printOutput,
   resolveCommandContext,
@@ -63,7 +64,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (userSlug: string, opts: CompanyOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          printOutput(await ctx.api.get(`/api/companies/${ctx.companyId}/users/${userSlug}/profile`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/companies/${ctx.companyId}/users/${userSlug}/profile`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -82,7 +83,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (inviteId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.post(`/api/invites/${inviteId}/revoke`, {}), { json: ctx.json });
+          printOutput(await ctx.api.post(apiPath`/api/invites/${inviteId}/revoke`, {}), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -104,7 +105,7 @@ export function registerAccessCommands(program: Command): void {
         .action(async (token: string, opts: BaseClientOptions) => {
           try {
             const ctx = resolveCommandContext(opts);
-            const path = `/api/invites/${token}${suffix ? `/${suffix}` : ""}`;
+            const path = `${apiPath`/api/invites/${token}`}${suffix ? `/${suffix}` : ""}`;
             printOutput(await ctx.api.get(path), { json: ctx.json });
           } catch (err) {
             handleCommandError(err);
@@ -121,7 +122,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (token: string, skillName: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/invites/${token}/skills/${skillName}`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/invites/${token}/skills/${skillName}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -136,7 +137,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (token: string, opts: JsonPayloadOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.post(`/api/invites/${token}/accept`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+          printOutput(await ctx.api.post(apiPath`/api/invites/${token}/accept`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -158,7 +159,7 @@ export function registerAccessCommands(program: Command): void {
           if (opts.status) params.set("status", opts.status);
           if (opts.requestType) params.set("requestType", opts.requestType);
           const query = params.toString();
-          printOutput(await ctx.api.get(`/api/companies/${ctx.companyId}/join-requests${query ? `?${query}` : ""}`), { json: ctx.json });
+          printOutput(await ctx.api.get(`${apiPath`/api/companies/${ctx.companyId}/join-requests`}${query ? `?${query}` : ""}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -176,7 +177,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (requestId: string, opts: BaseClientOptions & { claimSecret: string }) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.post(`/api/join-requests/${requestId}/claim-api-key`, { claimSecret: opts.claimSecret }), { json: ctx.json });
+          printOutput(await ctx.api.post(apiPath`/api/join-requests/${requestId}/claim-api-key`, { claimSecret: opts.claimSecret }), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -218,7 +219,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (userId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/admin/users/${userId}/company-access`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/admin/users/${userId}/company-access`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -233,7 +234,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (userId: string, opts: JsonPayloadOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.put(`/api/admin/users/${userId}/company-access`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+          printOutput(await ctx.api.put(apiPath`/api/admin/users/${userId}/company-access`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -280,7 +281,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (token: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/board-claim/${token}`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/board-claim/${token}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -295,7 +296,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (token: string, opts: JsonPayloadOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.post(`/api/board-claim/${token}/claim`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+          printOutput(await ctx.api.post(apiPath`/api/board-claim/${token}/claim`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -316,7 +317,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (skillName: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/skills/${skillName}`), { json: ctx.json });
+          printOutput(await ctx.api.get(apiPath`/api/skills/${skillName}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -334,7 +335,7 @@ export function registerAccessCommands(program: Command): void {
       .action(async (adapterType: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get(`/api/llms/agent-configuration/${adapterType}.txt`), { json: ctx.json });
+          printOutput(await ctx.api.get(`${apiPath`/api/llms/agent-configuration/${adapterType}`}.txt`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
@@ -380,7 +381,7 @@ function addCompanyList(parent: Command, name: string, description: string, path
     parent.command(name).description(description).option("-C, --company-id <id>", "Company ID").action(async (opts: CompanyOptions) => {
       try {
         const ctx = resolveCommandContext(opts, { requireCompany: true });
-        printOutput(await ctx.api.get(`/api/companies/${ctx.companyId}/${path}`), { json: ctx.json });
+        printOutput(await ctx.api.get(`${apiPath`/api/companies/${ctx.companyId}`}/${path}`), { json: ctx.json });
       } catch (err) {
         handleCommandError(err);
       }
@@ -394,7 +395,7 @@ function addCompanyPut(parent: Command, name: string, description: string, path:
     parent.command(name).description(description).option("-C, --company-id <id>", "Company ID").requiredOption("--payload-json <json>", "JSON payload").action(async (opts: JsonPayloadOptions) => {
       try {
         const ctx = resolveCommandContext(opts, { requireCompany: true });
-        printOutput(await ctx.api.put(`/api/companies/${ctx.companyId}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+        printOutput(await ctx.api.put(`${apiPath`/api/companies/${ctx.companyId}`}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
       } catch (err) {
         handleCommandError(err);
       }
@@ -408,7 +409,7 @@ function addCompanyPost(parent: Command, name: string, description: string, path
     parent.command(name).description(description).option("-C, --company-id <id>", "Company ID").requiredOption("--payload-json <json>", "JSON payload").action(async (opts: JsonPayloadOptions) => {
       try {
         const ctx = resolveCommandContext(opts, { requireCompany: true });
-        printOutput(await ctx.api.post(`/api/companies/${ctx.companyId}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+        printOutput(await ctx.api.post(`${apiPath`/api/companies/${ctx.companyId}`}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
       } catch (err) {
         handleCommandError(err);
       }
@@ -422,7 +423,7 @@ function addJoinAction(parent: Command, action: "approve" | "reject"): void {
     parent.command(action).description(`${action} a join request`).argument("<requestId>", "Join request ID").option("-C, --company-id <id>", "Company ID").action(async (requestId: string, opts: CompanyOptions) => {
       try {
         const ctx = resolveCommandContext(opts, { requireCompany: true });
-        printOutput(await ctx.api.post(`/api/companies/${ctx.companyId}/join-requests/${requestId}/${action}`, {}), { json: ctx.json });
+        printOutput(await ctx.api.post(`${apiPath`/api/companies/${ctx.companyId}/join-requests/${requestId}`}/${action}`, {}), { json: ctx.json });
       } catch (err) {
         handleCommandError(err);
       }
@@ -436,7 +437,7 @@ function addMemberPatch(parent: Command, name: string, path: string, suffix?: st
     parent.command(name).description(`${name} a member`).argument("<memberId>", "Member ID").option("-C, --company-id <id>", "Company ID").requiredOption("--payload-json <json>", "JSON payload").action(async (memberId: string, opts: JsonPayloadOptions) => {
       try {
         const ctx = resolveCommandContext(opts, { requireCompany: true });
-        const route = `/api/companies/${ctx.companyId}/${path}/${memberId}${suffix ? `/${suffix}` : ""}`;
+        const route = `${apiPath`/api/companies/${ctx.companyId}`}/${path}/${encodeURIComponent(memberId)}${suffix ? `/${suffix}` : ""}`;
         printOutput(await ctx.api.patch(route, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
       } catch (err) {
         handleCommandError(err);
@@ -451,7 +452,7 @@ function addMemberPost(parent: Command, name: string, path: string, suffix: stri
     parent.command(name).description(`${name} a member`).argument("<memberId>", "Member ID").option("-C, --company-id <id>", "Company ID").option("--payload-json <json>", "JSON payload", "{}").action(async (memberId: string, opts: JsonPayloadOptions) => {
       try {
         const ctx = resolveCommandContext(opts, { requireCompany: true });
-        printOutput(await ctx.api.post(`/api/companies/${ctx.companyId}/${path}/${memberId}/${suffix}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+        printOutput(await ctx.api.post(`${apiPath`/api/companies/${ctx.companyId}`}/${path}/${encodeURIComponent(memberId)}/${suffix}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
       } catch (err) {
         handleCommandError(err);
       }
@@ -464,7 +465,7 @@ function addAdminUserPost(parent: Command, name: string, suffix: string): void {
   addCommonClientOptions(parent.command(name).description(`${name} instance admin`).argument("<userId>", "User ID").action(async (userId: string, opts: BaseClientOptions) => {
     try {
       const ctx = resolveCommandContext(opts);
-      printOutput(await ctx.api.post(`/api/admin/users/${userId}/${suffix}`, {}), { json: ctx.json });
+      printOutput(await ctx.api.post(`${apiPath`/api/admin/users/${userId}`}/${suffix}`, {}), { json: ctx.json });
     } catch (err) {
       handleCommandError(err);
     }

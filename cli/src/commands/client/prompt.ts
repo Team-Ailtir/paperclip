@@ -3,6 +3,7 @@ import type { Agent, Issue, IssueComment } from "@paperclipai/shared";
 import { addIssueCommentSchema, createIssueSchema } from "@paperclipai/shared";
 import {
   addCommonClientOptions,
+  apiPath,
   handleCommandError,
   printOutput,
   resolveCommandContext,
@@ -147,7 +148,7 @@ export async function runBoardPrompt(
   }
   const body = normalizePrompt(prompt);
   const query = new URLSearchParams({ companyId: ctx.companyId ?? "" });
-  const agent = await ctx.api.get<Agent>(`/api/agents/${encodeURIComponent(agentRef)}?${query.toString()}`);
+  const agent = await ctx.api.get<Agent>(`${apiPath`/api/agents/${agentRef}`}?${query.toString()}`);
   if (!agent) throw new Error(`Agent not found: ${agentRef}`);
 
   return createOrCommentForAgent({
@@ -180,7 +181,7 @@ async function createOrCommentForAgent(input: {
       body: input.prompt,
       resume: input.wake,
     });
-    const comment = await input.api.post<IssueComment>(`/api/issues/${input.issueId.trim()}/comments`, payload);
+    const comment = await input.api.post<IssueComment>(apiPath`/api/issues/${input.issueId.trim()}/comments`, payload);
     const wakeup = input.wake
       ? await wakeAgent(input.api, input.agent.id, input.issueId.trim(), "Prompt comment handoff")
       : null;
@@ -203,7 +204,7 @@ async function createOrCommentForAgent(input: {
     priority: "medium",
     assigneeAgentId: input.agent.id,
   });
-  const issue = await input.api.post<Issue>(`/api/companies/${input.companyId}/issues`, payload);
+  const issue = await input.api.post<Issue>(apiPath`/api/companies/${input.companyId}/issues`, payload);
   const wakeup = input.wake && issue?.id
     ? await wakeAgent(input.api, input.agent.id, issue.id, "Prompt issue handoff")
     : null;
@@ -225,7 +226,7 @@ function wakeAgent(
   issueId: string,
   reason: string,
 ): Promise<unknown> {
-  return api.post(`/api/agents/${agentId}/wakeup`, {
+  return api.post(apiPath`/api/agents/${agentId}/wakeup`, {
     source: "on_demand",
     triggerDetail: "manual",
     reason,

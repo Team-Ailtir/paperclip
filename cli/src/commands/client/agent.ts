@@ -23,6 +23,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   addCommonClientOptions,
+  apiPath,
   formatInlineRecord,
   handleCommandError,
   printOutput,
@@ -286,7 +287,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (opts: AgentListOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          const rows = (await ctx.api.get<Agent[]>(`/api/companies/${ctx.companyId}/agents`)) ?? [];
+          const rows = (await ctx.api.get<Agent[]>(apiPath`/api/companies/${ctx.companyId}/agents`)) ?? [];
 
           if (ctx.json) {
             printOutput(rows, { json: true });
@@ -326,7 +327,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const row = await ctx.api.get<Agent>(`/api/agents/${agentId}`);
+          const row = await ctx.api.get<Agent>(apiPath`/api/agents/${agentId}`);
           printOutput(row, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -344,7 +345,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const payload = createAgentSchema.parse(parseJson(opts.payloadJson));
-          const created = await ctx.api.post<Agent>(`/api/companies/${ctx.companyId}/agents`, payload);
+          const created = await ctx.api.post<Agent>(apiPath`/api/companies/${ctx.companyId}/agents`, payload);
           printOutput(created, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -362,7 +363,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (opts: AgentJsonPayloadOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
-          const result = await ctx.api.post(`/api/companies/${ctx.companyId}/agent-hires`, parseJson(opts.payloadJson));
+          const result = await ctx.api.post(apiPath`/api/companies/${ctx.companyId}/agent-hires`, parseJson(opts.payloadJson));
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -381,7 +382,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const payload = updateAgentSchema.parse(parseJson(opts.payloadJson));
-          const updated = await ctx.api.patch<Agent>(`/api/agents/${agentId}`, payload);
+          const updated = await ctx.api.patch<Agent>(apiPath`/api/agents/${agentId}`, payload);
           printOutput(updated, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -399,7 +400,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           if (!opts.yes) throw new Error("Refusing to delete without --yes");
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.delete(`/api/agents/${agentId}`);
+          const result = await ctx.api.delete(apiPath`/api/agents/${agentId}`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -423,7 +424,7 @@ export function registerAgentCommands(program: Command): void {
         .action(async (agentId: string, opts: BaseClientOptions) => {
           try {
             const ctx = resolveCommandContext(opts);
-            const result = await ctx.api.post(`/api/agents/${agentId}/${path}`, {});
+            const result = await ctx.api.post(`${apiPath`/api/agents/${agentId}`}/${path}`, {});
             printOutput(result, { json: ctx.json });
           } catch (err) {
             handleCommandError(err);
@@ -442,7 +443,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const payload = updateAgentPermissionsSchema.parse(parseJson(opts.payloadJson));
-          const updated = await ctx.api.patch(`/api/agents/${agentId}/permissions`, payload);
+          const updated = await ctx.api.patch(apiPath`/api/agents/${agentId}/permissions`, payload);
           printOutput(updated, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -458,7 +459,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.get(`/api/agents/${agentId}/configuration`);
+          const result = await ctx.api.get(apiPath`/api/agents/${agentId}/configuration`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -474,7 +475,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.get(`/api/agents/${agentId}/config-revisions`);
+          const result = await ctx.api.get(apiPath`/api/agents/${agentId}/config-revisions`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -491,7 +492,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, revisionId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.get(`/api/agents/${agentId}/config-revisions/${revisionId}`);
+          const result = await ctx.api.get(apiPath`/api/agents/${agentId}/config-revisions/${revisionId}`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -508,7 +509,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, revisionId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.post(`/api/agents/${agentId}/config-revisions/${revisionId}/rollback`, {});
+          const result = await ctx.api.post(apiPath`/api/agents/${agentId}/config-revisions/${revisionId}/rollback`, {});
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -524,7 +525,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.get(`/api/agents/${agentId}/runtime-state`);
+          const result = await ctx.api.get(apiPath`/api/agents/${agentId}/runtime-state`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -542,7 +543,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const payload = resetAgentSessionSchema.parse({ taskKey: opts.taskKey });
-          const result = await ctx.api.post(`/api/agents/${agentId}/runtime-state/reset-session`, payload);
+          const result = await ctx.api.post(apiPath`/api/agents/${agentId}/runtime-state/reset-session`, payload);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -558,7 +559,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.get(`/api/agents/${agentId}/task-sessions`);
+          const result = await ctx.api.get(apiPath`/api/agents/${agentId}/task-sessions`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -574,7 +575,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.get(`/api/agents/${agentId}/skills`);
+          const result = await ctx.api.get(apiPath`/api/agents/${agentId}/skills`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -592,7 +593,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const payload = agentSkillSyncSchema.parse({ desiredSkills: parseCsv(opts.desiredSkills) });
-          const result = await ctx.api.post(`/api/agents/${agentId}/skills/sync`, payload);
+          const result = await ctx.api.post(apiPath`/api/agents/${agentId}/skills/sync`, payload);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -610,7 +611,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const payload = updateAgentInstructionsPathSchema.parse(parseJson(opts.payloadJson));
-          const result = await ctx.api.patch(`/api/agents/${agentId}/instructions-path`, payload);
+          const result = await ctx.api.patch(apiPath`/api/agents/${agentId}/instructions-path`, payload);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -626,7 +627,7 @@ export function registerAgentCommands(program: Command): void {
       .action(async (agentId: string, opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          const result = await ctx.api.get(`/api/agents/${agentId}/instructions-bundle`);
+          const result = await ctx.api.get(apiPath`/api/agents/${agentId}/instructions-bundle`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -644,7 +645,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const payload = updateAgentInstructionsBundleSchema.parse(parseJson(opts.payloadJson));
-          const result = await ctx.api.patch(`/api/agents/${agentId}/instructions-bundle`, payload);
+          const result = await ctx.api.patch(apiPath`/api/agents/${agentId}/instructions-bundle`, payload);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -662,7 +663,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const query = new URLSearchParams({ path: opts.path });
-          const result = await ctx.api.get(`/api/agents/${agentId}/instructions-bundle/file?${query.toString()}`);
+          const result = await ctx.api.get(`${apiPath`/api/agents/${agentId}/instructions-bundle/file`}?${query.toString()}`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -688,7 +689,7 @@ export function registerAgentCommands(program: Command): void {
             content,
             clearLegacyPromptTemplate: Boolean(opts.clearLegacyPromptTemplate),
           });
-          const result = await ctx.api.put(`/api/agents/${agentId}/instructions-bundle/file`, payload);
+          const result = await ctx.api.put(apiPath`/api/agents/${agentId}/instructions-bundle/file`, payload);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -706,7 +707,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const query = new URLSearchParams({ path: opts.path });
-          const result = await ctx.api.delete(`/api/agents/${agentId}/instructions-bundle/file?${query.toString()}`);
+          const result = await ctx.api.delete(`${apiPath`/api/agents/${agentId}/instructions-bundle/file`}?${query.toString()}`);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -730,7 +731,7 @@ export function registerAgentCommands(program: Command): void {
         try {
           const ctx = resolveCommandContext(opts);
           const query = opts.companyId ? `?${new URLSearchParams({ companyId: opts.companyId }).toString()}` : "";
-          const agentRow = await ctx.api.get<Agent>(`/api/agents/${encodeURIComponent(agentRef)}${query}`);
+          const agentRow = await ctx.api.get<Agent>(`${apiPath`/api/agents/${agentRef}`}${query}`);
           if (!agentRow) {
             throw new Error(`Agent not found: ${agentRef}`);
           }
@@ -742,7 +743,7 @@ export function registerAgentCommands(program: Command): void {
             idempotencyKey: opts.idempotencyKey,
             forceFreshSession: Boolean(opts.forceFreshSession),
           });
-          const result = await ctx.api.post<AgentWakeupResponse>(`/api/agents/${agentRow.id}/wakeup`, payload);
+          const result = await ctx.api.post<AgentWakeupResponse>(apiPath`/api/agents/${agentRow.id}/wakeup`, payload);
           printOutput(result, { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
@@ -769,7 +770,7 @@ export function registerAgentCommands(program: Command): void {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const query = new URLSearchParams({ companyId: ctx.companyId ?? "" });
           const agentRow = await ctx.api.get<Agent>(
-            `/api/agents/${encodeURIComponent(agentRef)}?${query.toString()}`,
+            `${apiPath`/api/agents/${agentRef}`}?${query.toString()}`,
           );
           if (!agentRow) {
             throw new Error(`Agent not found: ${agentRef}`);
@@ -777,7 +778,7 @@ export function registerAgentCommands(program: Command): void {
 
           const now = new Date().toISOString().replaceAll(":", "-");
           const keyName = opts.keyName?.trim() ? opts.keyName.trim() : `local-cli-${now}`;
-          const key = await ctx.api.post<CreatedAgentKey>(`/api/agents/${agentRow.id}/keys`, { name: keyName });
+          const key = await ctx.api.post<CreatedAgentKey>(apiPath`/api/agents/${agentRow.id}/keys`, { name: keyName });
           if (!key) {
             throw new Error("Failed to create API key");
           }
