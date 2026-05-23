@@ -62,6 +62,26 @@ Main limitation:
 - Do not add project/issue privacy semantics; V1 visibility remains company-scoped.
 - Do not make a generic `curl` passthrough the primary parity story.
 
+## API Location Requirements
+
+The CLI must always know which Paperclip API it is operating against. This is especially important for fork/local development, where Paperclip may run on `3101+` rather than the upstream default `3100`.
+
+Resolution order:
+
+1. Explicit `--api-base <url>`.
+2. `PAPERCLIP_API_URL`.
+3. Selected context profile `apiBase`.
+4. Repo-local or instance config port, when available.
+5. Default `http://localhost:3100`.
+
+Behavior requirements:
+
+- `paperclipai connect` must show the resolved API base before any auth or mutation and allow the user to override it.
+- Non-interactive commands must accept `--api-base` and produce a clear connection error that includes the attempted URL and a health-check hint.
+- Profiles must persist `apiBase` so a board/agent persona is always tied to the API instance it was created for.
+- Commands that mint or use tokens must not silently fall back to a different API base if a stored credential is missing. They should ask interactively or fail with instructions in non-interactive mode.
+- The quick verification after `connect` should call `GET /api/health` against the selected API base.
+
 ## Target User Flows
 
 ### Interactive Connection Wizard
@@ -528,6 +548,20 @@ Alias policy:
 - Token creation and revocation must log activity through existing server routes.
 - Commands that mutate company state should print the actor type and target company in `--json` output when practical.
 
+## Testing Rules
+
+Automated tests should prefer mocked HTTP/server fixtures where possible. Live/API verification is allowed, but it must be isolated:
+
+- Live tests must create a new disposable company specifically for that test run.
+- Live tests must never use an existing company from the operator's profile, local instance, or shared environment.
+- The disposable company name should include a clear prefix such as `CLI Parity Test` plus a timestamp or random suffix.
+- All agents, projects, issues, tokens, budgets, secrets, routines, workspaces, and other test data must be created inside the disposable company.
+- Agent API keys used in tests must be minted only for agents created inside the disposable company.
+- Board token tests must use a test-specific key name and revoke the key during cleanup when the API supports it.
+- Cleanup should archive or delete the disposable company when the server permits it. If deletion is disabled, the test must leave the company clearly named as disposable and report its ID.
+- Commands must provide a `--yes` or non-interactive path for test setup so CI and local verification do not depend on manual prompts.
+- Destructive tests must require an explicit test opt-in such as an env var or a dedicated test command; normal unit tests must not mutate a real running Paperclip instance.
+
 ## Implementation Plan
 
 ### Phase 1: Credential and Persona Foundation
@@ -537,7 +571,9 @@ Alias policy:
 - Add `token agent create/list/revoke`.
 - Add `agent me`.
 - Add `agent prompt` and `prompt` using issue create/comment plus optional wake.
+- Harden API base resolution and connection diagnostics.
 - Add tests around context migration, explicit token precedence, and persona mismatch failures.
+- Add live-test helpers that always create a disposable company before exercising real API mutations.
 
 ### Phase 2: Board Token Management
 
@@ -562,7 +598,7 @@ Alias policy:
 
 ## Acceptance Criteria
 
-- A new user can run `paperclipai connect`, select board or agent, and get a saved working profile.
+- A new user can run `paperclipai connect`, confirm or override the API base, select board or agent, and get a saved working profile tied to that API base.
 - A board operator can mint an agent key for a selected agent in a selected company without using `agent local-cli`.
 - A script can run a one-liner equivalent to:
 
@@ -571,6 +607,7 @@ paperclipai agent-prompt AgentName "$AGENT_API_KEY" "Prompt here"
 ```
 
 - The one-liner creates or updates Paperclip work, does not require a browser, and fails with a clear company/agent mismatch error when the token does not belong to the requested agent.
+- Live/API verification creates and uses a disposable company only; no existing company is used for testing.
 - CLI docs list which API route families are covered and which remain UI-only.
 - Token creation, revocation, and prompt handoff have tests for board and agent auth paths.
 
