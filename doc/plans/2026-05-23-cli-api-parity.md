@@ -206,8 +206,10 @@ OpenAPI source audit:
 
 - Source branch: `feature/openapi-spec`
 - Source file: `server/src/openapi.ts`
+- Local snapshot for this PRD: `doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts`
 - Extracted operations: 307
 - Validation context: that branch includes `server/src/__tests__/openapi-spec.test.ts`, which asserts the OpenAPI document covers mounted server routes exactly.
+- Snapshot purpose: keep the full operation registrations, request schemas, auth annotations, response status overrides, and tag/summary values next to the CLI parity plan even before the OpenAPI branch is merged.
 
 Additional gaps made explicit by the OpenAPI branch:
 
@@ -581,7 +583,7 @@ paperclipai agent-prompt AgentName "$AGENT_API_KEY" "Prompt here"
 
 ## Appendix: OpenAPI Endpoint Checklist
 
-This list was extracted from `server/src/openapi.ts` on `feature/openapi-spec` on 2026-05-23. Use it as the route-level CLI parity checklist. Paths use OpenAPI `{param}` syntax.
+This list was extracted from `server/src/openapi.ts` on `feature/openapi-spec` on 2026-05-23. The full source snapshot is kept next to this PRD at `doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts`. Use this appendix as the route-level CLI parity checklist and use the snapshot when request body schemas, auth levels, status codes, tags, or operation summaries are needed. Paths use OpenAPI `{param}` syntax.
 
 ```text
 GET /api/health
