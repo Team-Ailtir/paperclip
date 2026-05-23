@@ -397,10 +397,56 @@ pnpm paperclipai dashboard get --company-id <company-id>
 ## Org And Agent Config Commands
 
 ```sh
+pnpm paperclipai whoami
+pnpm paperclipai openapi
 pnpm paperclipai org get --company-id <company-id>
 pnpm paperclipai org svg --company-id <company-id> [--out org.svg]
 pnpm paperclipai org png --company-id <company-id> [--out org.png]
 pnpm paperclipai agent-config list --company-id <company-id>
+```
+
+## Access, Profile, And Instance Commands
+
+```sh
+pnpm paperclipai profile session
+pnpm paperclipai profile get
+pnpm paperclipai profile update --payload-json '{...}'
+pnpm paperclipai profile company-user <user-slug> --company-id <company-id>
+pnpm paperclipai invite list --company-id <company-id>
+pnpm paperclipai invite create --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai invite revoke <invite-id>
+pnpm paperclipai invite show <token>
+pnpm paperclipai invite accept <token> [--payload-json '{...}']
+pnpm paperclipai invite onboarding:text <token>
+pnpm paperclipai join list --company-id <company-id> [--status pending_approval]
+pnpm paperclipai join approve <request-id> --company-id <company-id>
+pnpm paperclipai join reject <request-id> --company-id <company-id>
+pnpm paperclipai join claim-key <request-id> --claim-secret <secret>
+pnpm paperclipai member list --company-id <company-id>
+pnpm paperclipai member update <member-id> --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai member role-and-grants <member-id> --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai member permissions <member-id> --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai member archive <member-id> --company-id <company-id> [--payload-json '{...}']
+pnpm paperclipai admin user list [--query <text>]
+pnpm paperclipai admin user promote <user-id>
+pnpm paperclipai admin user demote <user-id>
+pnpm paperclipai admin user company-access <user-id>
+pnpm paperclipai admin user company-access:update <user-id> --payload-json '{...}'
+```
+
+```sh
+pnpm paperclipai instance scheduler-heartbeats
+pnpm paperclipai instance settings:general
+pnpm paperclipai instance settings:general:update --payload-json '{...}'
+pnpm paperclipai instance settings:experimental
+pnpm paperclipai instance settings:experimental:update --payload-json '{...}'
+pnpm paperclipai instance database-backup
+pnpm paperclipai sidebar preferences
+pnpm paperclipai sidebar preferences:update --payload-json '{...}'
+pnpm paperclipai sidebar badges --company-id <company-id>
+pnpm paperclipai llm agent-configuration
+pnpm paperclipai llm agent-configuration:adapter <adapter-type>
+pnpm paperclipai llm agent-icons
 ```
 
 ## Cost, Finance, And Budget Commands

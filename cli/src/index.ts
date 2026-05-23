@@ -34,6 +34,7 @@ import { registerPromptCommands } from "./commands/client/prompt.js";
 import { registerRunCommands } from "./commands/client/run.js";
 import { registerCostCommands } from "./commands/client/cost.js";
 import { registerWorkspaceCommands } from "./commands/client/workspace.js";
+import { registerAccessCommands } from "./commands/client/access.js";
 import { cliVersion } from "./version.js";
 
 const program = new Command();
@@ -164,6 +165,7 @@ registerActivityCommands(program);
 registerDashboardCommands(program);
 registerCostCommands(program);
 registerWorkspaceCommands(program);
+registerAccessCommands(program);
 registerRoutineCommands(program);
 registerFeedbackCommands(program);
 registerSecretCommands(program);
