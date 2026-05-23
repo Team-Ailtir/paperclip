@@ -32,6 +32,8 @@ import { registerConnectCommand } from "./commands/client/connect.js";
 import { registerTokenCommands } from "./commands/client/token.js";
 import { registerPromptCommands } from "./commands/client/prompt.js";
 import { registerRunCommands } from "./commands/client/run.js";
+import { registerCostCommands } from "./commands/client/cost.js";
+import { registerWorkspaceCommands } from "./commands/client/workspace.js";
 import { cliVersion } from "./version.js";
 
 const program = new Command();
@@ -160,6 +162,8 @@ registerPromptCommands(program);
 registerApprovalCommands(program);
 registerActivityCommands(program);
 registerDashboardCommands(program);
+registerCostCommands(program);
+registerWorkspaceCommands(program);
 registerRoutineCommands(program);
 registerFeedbackCommands(program);
 registerSecretCommands(program);

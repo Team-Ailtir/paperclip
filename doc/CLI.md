@@ -394,6 +394,77 @@ pnpm paperclipai activity list --company-id <company-id> [--agent-id <agent-id>]
 pnpm paperclipai dashboard get --company-id <company-id>
 ```
 
+## Org And Agent Config Commands
+
+```sh
+pnpm paperclipai org get --company-id <company-id>
+pnpm paperclipai org svg --company-id <company-id> [--out org.svg]
+pnpm paperclipai org png --company-id <company-id> [--out org.png]
+pnpm paperclipai agent-config list --company-id <company-id>
+```
+
+## Cost, Finance, And Budget Commands
+
+```sh
+pnpm paperclipai cost summary --company-id <company-id>
+pnpm paperclipai cost by-agent --company-id <company-id>
+pnpm paperclipai cost by-agent-model --company-id <company-id>
+pnpm paperclipai cost by-provider --company-id <company-id>
+pnpm paperclipai cost by-biller --company-id <company-id>
+pnpm paperclipai cost by-project --company-id <company-id>
+pnpm paperclipai cost window-spend --company-id <company-id>
+pnpm paperclipai cost quota-windows --company-id <company-id>
+pnpm paperclipai cost issue <issue-id>
+pnpm paperclipai cost event:create --company-id <company-id> --payload-json '{...}'
+```
+
+```sh
+pnpm paperclipai finance event:create --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai finance events --company-id <company-id>
+pnpm paperclipai finance summary --company-id <company-id>
+pnpm paperclipai finance by-biller --company-id <company-id>
+pnpm paperclipai finance by-kind --company-id <company-id>
+pnpm paperclipai budget overview --company-id <company-id>
+pnpm paperclipai budget policy:upsert --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai budget company:update --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai budget agent:update <agent-id> --payload-json '{...}'
+pnpm paperclipai budget incident:resolve <incident-id> --company-id <company-id> [--payload-json '{...}']
+```
+
+## Workspace And Environment Commands
+
+```sh
+pnpm paperclipai workspace list --company-id <company-id>
+pnpm paperclipai workspace get <execution-workspace-id>
+pnpm paperclipai workspace close-readiness <execution-workspace-id>
+pnpm paperclipai workspace operations <execution-workspace-id>
+pnpm paperclipai workspace update <execution-workspace-id> --payload-json '{...}'
+pnpm paperclipai workspace runtime-service <execution-workspace-id> start --payload-json '{...}'
+pnpm paperclipai workspace runtime-command <execution-workspace-id> run --payload-json '{...}'
+```
+
+```sh
+pnpm paperclipai environment list --company-id <company-id>
+pnpm paperclipai environment capabilities --company-id <company-id>
+pnpm paperclipai environment create --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai environment get <environment-id>
+pnpm paperclipai environment leases <environment-id>
+pnpm paperclipai environment lease <lease-id>
+pnpm paperclipai environment update <environment-id> --payload-json '{...}'
+pnpm paperclipai environment delete <environment-id>
+pnpm paperclipai environment probe <environment-id>
+pnpm paperclipai environment probe-config --company-id <company-id> --payload-json '{...}'
+```
+
+```sh
+pnpm paperclipai project-workspace list <project-id>
+pnpm paperclipai project-workspace create <project-id> --payload-json '{...}'
+pnpm paperclipai project-workspace update <project-id> <workspace-id> --payload-json '{...}'
+pnpm paperclipai project-workspace delete <project-id> <workspace-id>
+pnpm paperclipai project-workspace runtime-service <project-id> <workspace-id> restart --payload-json '{...}'
+pnpm paperclipai project-workspace runtime-command <project-id> <workspace-id> run --payload-json '{...}'
+```
+
 ## Heartbeat Command
 
 `heartbeat run` now also supports context/api-key options and uses the shared client stack:
