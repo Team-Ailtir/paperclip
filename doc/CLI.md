@@ -330,6 +330,26 @@ pnpm paperclipai run workspace-log <operation-id> [--offset 0] [--limit-bytes 16
 pnpm paperclipai run watchdog-decision <run-id> --decision continue [--reason "..."]
 ```
 
+## Routine Commands
+
+`paperclipai routines disable-all` remains the local maintenance command. The singular `routine` group maps to the REST API.
+
+```sh
+pnpm paperclipai routine list --company-id <company-id> [--project-id <project-id>]
+pnpm paperclipai routine create --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai routine get <routine-id>
+pnpm paperclipai routine update <routine-id> --payload-json '{...}'
+pnpm paperclipai routine revisions <routine-id>
+pnpm paperclipai routine revision:restore <routine-id> <revision-id>
+pnpm paperclipai routine runs <routine-id> [--limit 50]
+pnpm paperclipai routine run <routine-id> [--payload-json '{...}']
+pnpm paperclipai routine trigger:create <routine-id> --payload-json '{...}'
+pnpm paperclipai routine trigger:update <trigger-id> --payload-json '{...}'
+pnpm paperclipai routine trigger:delete <trigger-id>
+pnpm paperclipai routine trigger:rotate-secret <trigger-id>
+pnpm paperclipai routine trigger:fire <public-id> [--payload-json '{...}']
+```
+
 ## Prompt Handoff
 
 Prompt handoff creates Paperclip work. It does not create a chat session.
@@ -509,6 +529,31 @@ pnpm paperclipai project-workspace update <project-id> <workspace-id> --payload-
 pnpm paperclipai project-workspace delete <project-id> <workspace-id>
 pnpm paperclipai project-workspace runtime-service <project-id> <workspace-id> restart --payload-json '{...}'
 pnpm paperclipai project-workspace runtime-command <project-id> <workspace-id> run --payload-json '{...}'
+```
+
+## Plugin Commands
+
+Existing plugin lifecycle commands remain available: `plugin init`, `list`, `install`, `uninstall`, `enable`, `disable`, `inspect`, and `examples`.
+
+```sh
+pnpm paperclipai plugin ui-contributions
+pnpm paperclipai plugin tools
+pnpm paperclipai plugin tool:execute --payload-json '{...}'
+pnpm paperclipai plugin health <plugin-id>
+pnpm paperclipai plugin logs <plugin-id>
+pnpm paperclipai plugin upgrade <plugin-id>
+pnpm paperclipai plugin config <plugin-id>
+pnpm paperclipai plugin config:set <plugin-id> --payload-json '{"configJson":{...}}'
+pnpm paperclipai plugin config:test <plugin-id> --payload-json '{"configJson":{...}}'
+pnpm paperclipai plugin jobs <plugin-id>
+pnpm paperclipai plugin job:runs <plugin-id> <job-id>
+pnpm paperclipai plugin job:trigger <plugin-id> <job-id> [--payload-json '{...}']
+pnpm paperclipai plugin webhook <plugin-id> <endpoint-key> [--payload-json '{...}']
+pnpm paperclipai plugin dashboard <plugin-id>
+pnpm paperclipai plugin bridge:data <plugin-id> --payload-json '{...}'
+pnpm paperclipai plugin bridge:action <plugin-id> --payload-json '{...}'
+pnpm paperclipai plugin data <plugin-id> <key> --payload-json '{...}'
+pnpm paperclipai plugin action <plugin-id> <key> --payload-json '{...}'
 ```
 
 ## Heartbeat Command

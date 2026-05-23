@@ -65,6 +65,10 @@ interface PluginInitOptions extends BaseClientOptions {
   sdkPath?: string;
 }
 
+interface PluginJsonOptions extends BaseClientOptions {
+  payloadJson?: string;
+}
+
 interface PluginInitResult {
   outputDir: string;
   nextCommands: string[];
@@ -531,4 +535,104 @@ export function registerPluginCommands(program: Command): void {
         }
       }),
   );
+
+  addPluginGet(plugin, "ui-contributions", "List plugin UI contributions", "/api/plugins/ui-contributions");
+  addPluginGet(plugin, "tools", "List plugin tools", "/api/plugins/tools");
+  addPluginPost(plugin, "tool:execute", "Execute a plugin tool", "/api/plugins/tools/execute");
+  addPluginSubGet(plugin, "health", "Get plugin health", "health");
+  addPluginSubGet(plugin, "logs", "Get plugin logs", "logs");
+  addPluginSubPost(plugin, "upgrade", "Upgrade a plugin", "upgrade");
+  addPluginSubGet(plugin, "config", "Get plugin config", "config");
+  addPluginSubPost(plugin, "config:set", "Set plugin config", "config");
+  addPluginSubPost(plugin, "config:test", "Test plugin config", "config/test");
+  addPluginSubGet(plugin, "jobs", "List plugin jobs", "jobs");
+  addPluginJobGet(plugin, "job:runs", "List plugin job runs", "runs");
+  addPluginJobPost(plugin, "job:trigger", "Trigger a plugin job", "trigger");
+  addPluginKeyPost(plugin, "webhook", "Deliver a plugin webhook", "webhooks");
+  addPluginSubGet(plugin, "dashboard", "Get plugin dashboard data", "dashboard");
+  addPluginSubPost(plugin, "bridge:data", "Send plugin bridge data", "bridge/data");
+  addPluginSubPost(plugin, "bridge:action", "Send plugin bridge action", "bridge/action");
+  addPluginKeyPost(plugin, "data", "Get plugin URL-keyed data", "data");
+  addPluginKeyPost(plugin, "action", "Invoke plugin URL-keyed action", "actions");
+}
+
+function addPluginGet(parent: Command, name: string, description: string, path: string): void {
+  addCommonClientOptions(parent.command(name).description(description).action(async (opts: BaseClientOptions) => {
+    try {
+      const ctx = resolveCommandContext(opts);
+      printOutput(await ctx.api.get(path), { json: ctx.json });
+    } catch (err) {
+      handleCommandError(err);
+    }
+  }));
+}
+
+function addPluginPost(parent: Command, name: string, description: string, path: string): void {
+  addCommonClientOptions(parent.command(name).description(description).option("--payload-json <json>", "JSON payload", "{}").action(async (opts: PluginJsonOptions) => {
+    try {
+      const ctx = resolveCommandContext(opts);
+      printOutput(await ctx.api.post(path, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+    } catch (err) {
+      handleCommandError(err);
+    }
+  }));
+}
+
+function addPluginSubGet(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(parent.command(name).description(description).argument("<pluginId>", "Plugin ID or key").action(async (pluginId: string, opts: BaseClientOptions) => {
+    try {
+      const ctx = resolveCommandContext(opts);
+      printOutput(await ctx.api.get(`/api/plugins/${encodeURIComponent(pluginId)}/${suffix}`), { json: ctx.json });
+    } catch (err) {
+      handleCommandError(err);
+    }
+  }));
+}
+
+function addPluginSubPost(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(parent.command(name).description(description).argument("<pluginId>", "Plugin ID or key").option("--payload-json <json>", "JSON payload", "{}").action(async (pluginId: string, opts: PluginJsonOptions) => {
+    try {
+      const ctx = resolveCommandContext(opts);
+      printOutput(await ctx.api.post(`/api/plugins/${encodeURIComponent(pluginId)}/${suffix}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+    } catch (err) {
+      handleCommandError(err);
+    }
+  }));
+}
+
+function addPluginJobGet(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(parent.command(name).description(description).argument("<pluginId>", "Plugin ID or key").argument("<jobId>", "Job ID").action(async (pluginId: string, jobId: string, opts: BaseClientOptions) => {
+    try {
+      const ctx = resolveCommandContext(opts);
+      printOutput(await ctx.api.get(`/api/plugins/${encodeURIComponent(pluginId)}/jobs/${encodeURIComponent(jobId)}/${suffix}`), { json: ctx.json });
+    } catch (err) {
+      handleCommandError(err);
+    }
+  }));
+}
+
+function addPluginJobPost(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(parent.command(name).description(description).argument("<pluginId>", "Plugin ID or key").argument("<jobId>", "Job ID").option("--payload-json <json>", "JSON payload", "{}").action(async (pluginId: string, jobId: string, opts: PluginJsonOptions) => {
+    try {
+      const ctx = resolveCommandContext(opts);
+      printOutput(await ctx.api.post(`/api/plugins/${encodeURIComponent(pluginId)}/jobs/${encodeURIComponent(jobId)}/${suffix}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+    } catch (err) {
+      handleCommandError(err);
+    }
+  }));
+}
+
+function addPluginKeyPost(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(parent.command(name).description(description).argument("<pluginId>", "Plugin ID or key").argument("<key>", "Endpoint or data/action key").option("--payload-json <json>", "JSON payload", "{}").action(async (pluginId: string, key: string, opts: PluginJsonOptions) => {
+    try {
+      const ctx = resolveCommandContext(opts);
+      printOutput(await ctx.api.post(`/api/plugins/${encodeURIComponent(pluginId)}/${suffix}/${encodeURIComponent(key)}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+    } catch (err) {
+      handleCommandError(err);
+    }
+  }));
+}
+
+function parseJson(value: string): unknown {
+  return JSON.parse(value) as unknown;
 }
