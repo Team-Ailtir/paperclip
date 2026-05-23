@@ -383,6 +383,16 @@ pnpm paperclipai secrets declarations --company-id <company-id> [--include agent
 pnpm paperclipai secrets create --company-id <company-id> --name anthropic-api-key --value-env ANTHROPIC_API_KEY
 pnpm paperclipai secrets link --company-id <company-id> --name prod-stripe-key --provider aws_secrets_manager --external-ref <provider-ref>
 pnpm paperclipai secrets doctor --company-id <company-id>
+pnpm paperclipai secrets provider-configs --company-id <company-id>
+pnpm paperclipai secrets provider-config:create --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai secrets provider-config:discovery-preview --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai secrets provider-config:get <config-id>
+pnpm paperclipai secrets provider-config:update <config-id> --payload-json '{...}'
+pnpm paperclipai secrets provider-config:default <config-id>
+pnpm paperclipai secrets provider-config:health <config-id>
+pnpm paperclipai secrets provider-config:delete <config-id>
+pnpm paperclipai secrets remote-import:preview --company-id <company-id> --payload-json '{...}'
+pnpm paperclipai secrets remote-import --company-id <company-id> --payload-json '{...}'
 pnpm paperclipai secrets migrate-inline-env --company-id <company-id> [--apply]
 ```
 
@@ -394,10 +404,9 @@ env and the expected AWS SDK runtime credential source; do not store AWS
 bootstrap credentials in Paperclip secrets.
 
 Per-company provider vaults (multiple vault instances per provider, default
-vault selection, coming-soon GCP/Vault) are configured from the board UI under
-`Company Settings → Secrets → Provider vaults` or through
-`/api/companies/{companyId}/secret-provider-configs`. There is no CLI surface
-for vault management today. See the
+vault selection, coming-soon GCP/Vault) can be configured from the board UI under
+`Company Settings → Secrets → Provider vaults` or through the provider-config CLI
+commands above. See the
 [secrets deploy guide](../docs/deploy/secrets.md#provider-vaults) and
 [API reference](../docs/api/secrets.md#provider-vaults) for the contract.
 
@@ -627,6 +636,10 @@ pnpm paperclipai plugin bridge:action <plugin-id> --payload-json '{...}'
 pnpm paperclipai plugin bridge:stream <plugin-id> <channel> [--duration-ms 10000]
 pnpm paperclipai plugin data <plugin-id> <key> --payload-json '{...}'
 pnpm paperclipai plugin action <plugin-id> <key> --payload-json '{...}'
+pnpm paperclipai plugin local-folders <plugin-id> --company-id <company-id>
+pnpm paperclipai plugin local-folder:status <plugin-id> <folder-key> --company-id <company-id>
+pnpm paperclipai plugin local-folder:validate <plugin-id> <folder-key> --company-id <company-id> [--payload-json '{...}']
+pnpm paperclipai plugin local-folder:set <plugin-id> <folder-key> --company-id <company-id> --payload-json '{...}'
 ```
 
 Feedback traces can be fetched directly by ID when automating export workflows:

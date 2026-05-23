@@ -92,6 +92,10 @@ describe("routine and plugin parity commands", () => {
     await run(["plugin", "bridge:stream", "plug", "events", "--duration-ms", "1"]);
     await run(["plugin", "data", "plug", "key", "--payload-json", "{}"]);
     await run(["plugin", "action", "plug", "key", "--payload-json", "{}"]);
+    await run(["plugin", "local-folders", "plug", "--company-id", COMPANY_ID]);
+    await run(["plugin", "local-folder:status", "plug", "source", "--company-id", COMPANY_ID]);
+    await run(["plugin", "local-folder:validate", "plug", "source", "--company-id", COMPANY_ID, "--payload-json", "{}"]);
+    await run(["plugin", "local-folder:set", "plug", "source", "--company-id", COMPANY_ID, "--payload-json", "{}"]);
 
     expect(fetchMock.mock.calls.map((call) => [call[1]?.method ?? "GET", call[0]])).toEqual([
       ["GET", "http://localhost:3100/api/plugins/ui-contributions"],
@@ -113,6 +117,10 @@ describe("routine and plugin parity commands", () => {
       ["GET", "http://localhost:3100/api/plugins/plug/bridge/stream/events"],
       ["POST", "http://localhost:3100/api/plugins/plug/data/key"],
       ["POST", "http://localhost:3100/api/plugins/plug/actions/key"],
+      ["GET", `http://localhost:3100/api/plugins/plug/companies/${COMPANY_ID}/local-folders`],
+      ["GET", `http://localhost:3100/api/plugins/plug/companies/${COMPANY_ID}/local-folders/source/status`],
+      ["POST", `http://localhost:3100/api/plugins/plug/companies/${COMPANY_ID}/local-folders/source/validate`],
+      ["PUT", `http://localhost:3100/api/plugins/plug/companies/${COMPANY_ID}/local-folders/source`],
     ]);
   });
 });

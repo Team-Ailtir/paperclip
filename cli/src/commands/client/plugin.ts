@@ -73,6 +73,10 @@ interface PluginStreamOptions extends BaseClientOptions {
   durationMs?: string;
 }
 
+interface PluginCompanyOptions extends PluginJsonOptions {
+  companyId?: string;
+}
+
 interface PluginInitResult {
   outputDir: string;
   nextCommands: string[];
@@ -574,6 +578,10 @@ export function registerPluginCommands(program: Command): void {
   );
   addPluginKeyPost(plugin, "data", "Get plugin URL-keyed data", "data");
   addPluginKeyPost(plugin, "action", "Invoke plugin URL-keyed action", "actions");
+  addPluginLocalFolderGet(plugin, "local-folders", "List plugin local folder bindings");
+  addPluginLocalFolderKeyGet(plugin, "local-folder:status", "Get plugin local folder status", "status");
+  addPluginLocalFolderKeyPost(plugin, "local-folder:validate", "Validate plugin local folder binding", "validate");
+  addPluginLocalFolderKeyPut(plugin, "local-folder:set", "Set plugin local folder binding");
 }
 
 function addPluginGet(parent: Command, name: string, description: string, path: string): void {
@@ -651,6 +659,102 @@ function addPluginKeyPost(parent: Command, name: string, description: string, su
       handleCommandError(err);
     }
   }));
+}
+
+function addPluginLocalFolderGet(parent: Command, name: string, description: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<pluginId>", "Plugin ID or key")
+      .requiredOption("-C, --company-id <id>", "Company ID")
+      .action(async (pluginId: string, opts: PluginCompanyOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts, { requireCompany: true });
+          printOutput(await ctx.api.get(`/api/plugins/${encodeURIComponent(pluginId)}/companies/${ctx.companyId}/local-folders`), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+    { includeCompany: false },
+  );
+}
+
+function addPluginLocalFolderKeyGet(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<pluginId>", "Plugin ID or key")
+      .argument("<folderKey>", "Local folder key")
+      .requiredOption("-C, --company-id <id>", "Company ID")
+      .action(async (pluginId: string, folderKey: string, opts: PluginCompanyOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts, { requireCompany: true });
+          printOutput(
+            await ctx.api.get(`/api/plugins/${encodeURIComponent(pluginId)}/companies/${ctx.companyId}/local-folders/${encodeURIComponent(folderKey)}/${suffix}`),
+            { json: ctx.json },
+          );
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+    { includeCompany: false },
+  );
+}
+
+function addPluginLocalFolderKeyPost(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<pluginId>", "Plugin ID or key")
+      .argument("<folderKey>", "Local folder key")
+      .requiredOption("-C, --company-id <id>", "Company ID")
+      .option("--payload-json <json>", "JSON payload", "{}")
+      .action(async (pluginId: string, folderKey: string, opts: PluginCompanyOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts, { requireCompany: true });
+          printOutput(
+            await ctx.api.post(
+              `/api/plugins/${encodeURIComponent(pluginId)}/companies/${ctx.companyId}/local-folders/${encodeURIComponent(folderKey)}/${suffix}`,
+              parseJson(opts.payloadJson ?? "{}"),
+            ),
+            { json: ctx.json },
+          );
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+    { includeCompany: false },
+  );
+}
+
+function addPluginLocalFolderKeyPut(parent: Command, name: string, description: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<pluginId>", "Plugin ID or key")
+      .argument("<folderKey>", "Local folder key")
+      .requiredOption("-C, --company-id <id>", "Company ID")
+      .requiredOption("--payload-json <json>", "JSON payload")
+      .action(async (pluginId: string, folderKey: string, opts: PluginCompanyOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts, { requireCompany: true });
+          printOutput(
+            await ctx.api.put(
+              `/api/plugins/${encodeURIComponent(pluginId)}/companies/${ctx.companyId}/local-folders/${encodeURIComponent(folderKey)}`,
+              parseJson(opts.payloadJson ?? "{}"),
+            ),
+            { json: ctx.json },
+          );
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+    { includeCompany: false },
+  );
 }
 
 function parseJson(value: string): unknown {

@@ -59,6 +59,11 @@ interface SecretMigrateInlineEnvOptions extends BaseClientOptions {
   apply?: boolean;
 }
 
+interface SecretJsonOptions extends BaseClientOptions {
+  companyId?: string;
+  payloadJson?: string;
+}
+
 interface SecretProviderHealth {
   provider: SecretProvider;
   status: "ok" | "warn" | "error";
@@ -486,6 +491,36 @@ export function registerSecretCommands(program: Command): void {
 
   addCommonClientOptions(
     secrets
+      .command("provider-configs")
+      .description("List company secret provider vault configs")
+      .requiredOption("-C, --company-id <id>", "Company ID")
+      .action(async (opts: SecretDoctorOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts, { requireCompany: true });
+          printOutput(await ctx.api.get(`/api/companies/${ctx.companyId}/secret-provider-configs`), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+
+  addCompanySecretJsonPost(secrets, "provider-config:create", "Create a secret provider vault config", "secret-provider-configs");
+  addCompanySecretJsonPost(
+    secrets,
+    "provider-config:discovery-preview",
+    "Preview provider vault secret discovery",
+    "secret-provider-configs/discovery/preview",
+  );
+  addSecretProviderConfigGet(secrets, "provider-config:get", "Get a secret provider vault config", "");
+  addSecretProviderConfigPatch(secrets, "provider-config:update", "Update a secret provider vault config", "");
+  addSecretProviderConfigPost(secrets, "provider-config:default", "Set the default provider vault config", "default");
+  addSecretProviderConfigPost(secrets, "provider-config:health", "Check provider vault health", "health");
+  addSecretProviderConfigDelete(secrets, "provider-config:delete", "Delete a secret provider vault config");
+  addCompanySecretJsonPost(secrets, "remote-import:preview", "Preview remote secret import", "secrets/remote-import/preview");
+  addCompanySecretJsonPost(secrets, "remote-import", "Import selected remote secrets", "secrets/remote-import");
+
+  addCommonClientOptions(
+    secrets
       .command("migrate-inline-env")
       .description("Migrate inline sensitive agent env values into secret references")
       .requiredOption("-C, --company-id <id>", "Company ID")
@@ -498,4 +533,95 @@ export function registerSecretCommands(program: Command): void {
         }
       }),
   );
+}
+
+function addCompanySecretJsonPost(parent: Command, name: string, description: string, path: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .requiredOption("-C, --company-id <id>", "Company ID")
+      .requiredOption("--payload-json <json>", "JSON payload")
+      .action(async (opts: SecretJsonOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts, { requireCompany: true });
+          printOutput(await ctx.api.post(`/api/companies/${ctx.companyId}/${path}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+}
+
+function addSecretProviderConfigGet(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<configId>", "Provider config ID")
+      .action(async (configId: string, opts: BaseClientOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.get(`/api/secret-provider-configs/${configId}${suffix ? `/${suffix}` : ""}`), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+}
+
+function addSecretProviderConfigPatch(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<configId>", "Provider config ID")
+      .requiredOption("--payload-json <json>", "JSON payload")
+      .action(async (configId: string, opts: SecretJsonOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.patch(`/api/secret-provider-configs/${configId}${suffix ? `/${suffix}` : ""}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+}
+
+function addSecretProviderConfigPost(parent: Command, name: string, description: string, suffix: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<configId>", "Provider config ID")
+      .action(async (configId: string, opts: BaseClientOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.post(`/api/secret-provider-configs/${configId}/${suffix}`, {}), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+}
+
+function addSecretProviderConfigDelete(parent: Command, name: string, description: string): void {
+  addCommonClientOptions(
+    parent
+      .command(name)
+      .description(description)
+      .argument("<configId>", "Provider config ID")
+      .action(async (configId: string, opts: BaseClientOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.delete(`/api/secret-provider-configs/${configId}`), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+}
+
+function parseJson(value: string): unknown {
+  return JSON.parse(value) as unknown;
 }
