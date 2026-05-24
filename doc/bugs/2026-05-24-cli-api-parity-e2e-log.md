@@ -553,6 +553,17 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: Final artifacts are under `tmp/cli-api-parity/artifacts/final-*`.
 - Follow-up: Final report should include restart commands and call out `openapi --json` as not fixed because the OpenAPI branch/generator has not been integrated into this repo.
 
+### 2026-05-24T13:25:20+02:00 - OpenAPI route fix verification
+
+- Command: Generated `server/src/routes/openapi.ts` from the route inventory in `doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts`; mounted `openApiRoutes()` under `/api`; added `server/src/__tests__/openapi-routes.test.ts`; ran `pnpm exec vitest run server/src/__tests__/openapi-routes.test.ts`; `pnpm --dir server typecheck`; restarted the isolated runbook server with the scratch environment; `curl -fsS http://127.0.0.1:3197/api/openapi.json | jq '{openapi, pathCount:(.paths|keys|length)}'`; `pnpm --silent paperclipai openapi --json > tmp/cli-api-parity/artifacts/openapi-live-after-fix.json`.
+- Purpose: Close the remaining documented `openapi` CLI/API parity gap without introducing a new generator dependency during the live parity run.
+- Prerequisites/IDs used: Same scratch env, API URL `http://127.0.0.1:3197`, and local source-tree install.
+- Expected result: `/api/openapi.json` and `paperclipai openapi --json` return a valid OpenAPI 3.0 document with the reference route inventory, including representative CLI/API parity paths such as `/api/companies/{companyId}/agents` and `/api/agents/{id}/keys`.
+- Actual result: Focused test and `server` typecheck passed. After restart, direct curl returned `{"openapi":"3.0.0","pathCount":247}`. The CLI command returned `openapi: "3.0.0"`, title `Paperclip API`, `247` paths, `/api/openapi.json` summary `Get the generated OpenAPI document`, and `/api/agents/{id}/keys` POST summary `Create an agent API key`.
+- Status: PASS after MISMATCH-007 OpenAPI fix.
+- Output summary: Live OpenAPI artifact is `tmp/cli-api-parity/artifacts/openapi-live-after-fix.json`. The route exposes operation inventory, tags, summaries, and standard responses from the parity reference; it intentionally does not yet include full request/response schemas.
+- Follow-up: Commit the OpenAPI route fix, then rerun the final inventory/status sweep.
+
 ## Bugs And Mismatches
 
 ### BUG-009 - `token agent list --agent <agent-id>` failed even when the agent exists
@@ -713,16 +724,16 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 
 ### MISMATCH-007 - Public docs/catalog CLI routes missing or inconsistent
 
-- Status: Partially fixed; OpenAPI route remains unresolved.
+- Status: Fixed and live-verified, with remaining OpenAPI schema-depth limitation.
 - Severity: Medium CLI/API parity gap.
 - Reproduction command: `pnpm paperclipai openapi --json`; `pnpm paperclipai available-skill get cmux --json`; `pnpm paperclipai llm agent-configuration --json`; `pnpm paperclipai llm agent-icons --json`; `pnpm paperclipai llm agent-configuration:adapter process --json`.
 - Expected result: Registered CLI commands map to available API routes and return the OpenAPI document, skill markdown, and LLM prompt docs.
 - Actual result: Initially, `openapi` and all tested `llm` commands returned `404: API route not found`. `available-skill list` returned `cmux` from the real Claude home, but `available-skill get cmux` returned `404: Skill not found`.
-- Suspected cause: LLM routes were mounted at root while the CLI calls `/api/llms`; available-skill discovery used `HOME/.claude/skills` instead of `CLAUDE_HOME`; OpenAPI generation is referenced by CLI/docs but no route is currently mounted.
-- Files changed: `server/src/app.ts`, `server/src/routes/access.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
-- Fix summary: Mounted LLM docs routes under `/api`; made available-skill discovery honor `CLAUDE_HOME`, include built-in Paperclip repo skills, and fetch safe skill markdown consistently.
-- Verification command: `pnpm exec vitest run server/src/__tests__/llms-routes.test.ts cli/src/__tests__/access-parity.test.ts`; `pnpm --dir server typecheck`; `pnpm --dir cli typecheck`; live `llm` and `available-skill` commands after restart.
-- Remaining risk: `pnpm paperclipai openapi --json` still returns 404. Implementing the full OpenAPI route likely needs restoring or replacing the generator from `doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts` and its missing dependency, rather than a small route mapping fix.
+- Suspected cause: LLM routes were mounted at root while the CLI calls `/api/llms`; available-skill discovery used `HOME/.claude/skills` instead of `CLAUDE_HOME`; OpenAPI generation was referenced by CLI/docs but no route was mounted.
+- Files changed: `server/src/app.ts`, `server/src/routes/access.ts`, `server/src/routes/openapi.ts`, `server/src/__tests__/openapi-routes.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Mounted LLM docs routes under `/api`; made available-skill discovery honor `CLAUDE_HOME`, include built-in Paperclip repo skills, and fetch safe skill markdown consistently; added an `/api/openapi.json` route backed by the parity reference path inventory so the documented `openapi` CLI command has a live API target.
+- Verification command: `pnpm exec vitest run server/src/__tests__/llms-routes.test.ts cli/src/__tests__/access-parity.test.ts`; `pnpm --dir server typecheck`; `pnpm --dir cli typecheck`; live `llm` and `available-skill` commands after restart; `pnpm exec vitest run server/src/__tests__/openapi-routes.test.ts`; live `curl http://127.0.0.1:3197/api/openapi.json`; live `pnpm paperclipai openapi --json`.
+- Remaining risk: The new OpenAPI response is operation-inventory level and does not yet include full request/response schemas from the unintegrated zod-to-openapi-style generator in the planning reference.
 
 ### BUG-006 - Available skill catalog ignored isolated `CLAUDE_HOME`
 
