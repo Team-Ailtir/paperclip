@@ -366,6 +366,17 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: Added a pre-insert `local` environment conflict check and regression coverage.
 - Follow-up: Commit immediately, then restart the isolated server and rerun the failing CLI command against the updated code.
 
+### 2026-05-24T12:16:05+02:00 - Rerun duplicate local environment create on restarted server
+
+- Command: `env -u DATABASE_URL -u DATABASE_MIGRATION_URL ... pnpm paperclipai environment create --company-id 12e9db4b-f66c-459b-959e-d645002240fb --payload-json '{"name":"CLI parity local env","description":"Disposable CLI parity environment","driver":"local","config":{"cwd":"/Users/aronprins/Documents/PaperclipAI/paperclip"}}' --json`
+- Purpose: Verify `BUG-004` against the restarted isolated source-tree server.
+- Prerequisites/IDs used: Same scratch env; server restarted with `pnpm paperclipai onboard --yes --run --bind loopback`; company `12e9db4b-f66c-459b-959e-d645002240fb`.
+- Expected result: Controlled conflict instead of internal server error.
+- Actual result: CLI returned `API error 409: A local environment already exists for this company.`
+- Status: PASS.
+- Output summary: Confirms the live CLI/API path now exercises the fixed route behavior.
+- Follow-up: Continue remaining parity/fix pass.
+
 ## Bugs And Mismatches
 
 ### BUG-001 - `context set` erased existing profile fields
@@ -513,7 +524,7 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 
 ### BUG-004 - Creating a second local environment returned 500 instead of conflict
 
-- Status: Fixed; pending live-server rerun after restart.
+- Status: Fixed and live-verified.
 - Severity: Medium API error handling bug.
 - Reproduction command: `pnpm paperclipai environment create --company-id 12e9db4b-f66c-459b-959e-d645002240fb --payload-json '{"name":"CLI parity local env","description":"Disposable CLI parity environment","driver":"local","config":{"cwd":"/Users/aronprins/Documents/PaperclipAI/paperclip"}}' --json`.
 - Expected result: Controlled `409` or other user-facing validation error because a default local environment already exists for the company.
@@ -521,5 +532,5 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Suspected cause: The route attempted the insert without checking the partial unique constraint on `(company_id, driver)` for `driver = 'local'`.
 - Files changed: `server/src/routes/environments.ts`, `server/src/__tests__/environment-routes.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
 - Fix summary: Added a route-level pre-insert check that throws `409` when a local environment already exists for the company; added regression coverage.
-- Verification command: `pnpm exec vitest run server/src/__tests__/environment-routes.test.ts`; `pnpm --dir server typecheck`.
-- Remaining risk: The currently running isolated server still has old code until it is restarted; live CLI rerun is required after restart.
+- Verification command: `pnpm exec vitest run server/src/__tests__/environment-routes.test.ts`; `pnpm --dir server typecheck`; restarted isolated server and reran the reproduction command, which now returns `409`.
+- Remaining risk: Low; create flow for non-local environment drivers still needs separate positive coverage.
