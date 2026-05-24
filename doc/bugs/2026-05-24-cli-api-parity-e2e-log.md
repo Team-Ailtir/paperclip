@@ -674,7 +674,7 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Remaining caveats:
   - Positive interactive `connect` was not run because the CLI intentionally rejects non-TTY use; equivalent scriptable context/token/auth flows were covered.
   - Positive `board-claim claim` was not run because there was no live valid board claim challenge; invalid/gated paths were covered.
-  - OpenAPI works, but it is route/operation inventory level, not full request/response schema generation.
+  - OpenAPI initially worked only at route/operation inventory level; this was resolved in the follow-up with a schema-backed generator.
 - Tokens and cleanup: All created board and agent tokens were revoked. Plugins were uninstalled. Temporary secrets are gone. Temporary non-default environments and project workspaces are gone. Two routines remain archived in the disposable instance.
 - Verification run:
   - `pnpm exec vitest run server/src/__tests__/openapi-routes.test.ts`
@@ -702,6 +702,28 @@ pnpm paperclipai health --json
 ```
 
 - Follow-up: Commit this log-only update so the final handoff is preserved in git history.
+
+### 2026-05-24T14:07:24+02:00 - Caveat follow-up investigation
+
+- Command: `rg -n "openapi|OpenAPI|board-claim|connect" server cli packages doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts`; `sed -n ... server/src/routes/openapi.ts`; `sed -n ... doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts`; `sed -n ... server/src/board-claim.ts`; `sed -n ... cli/src/commands/client/connect.ts`; `lsof -nP -iTCP:3197 -sTCP:LISTEN`; `git status --short --branch`.
+- Purpose: Re-open the three final caveats and distinguish true implementation gaps from harness-gated coverage.
+- Prerequisites/IDs used: Existing isolated scratch server on `127.0.0.1:3197`, PID `70429`; same scratch env and repo branch `improvement/cli-api-parity`.
+- Expected result: Determine whether OpenAPI requires more implementation, whether a positive board-claim claim can be tested, and whether interactive `connect` has untested behavior beyond the already verified scriptable equivalents.
+- Actual result: OpenAPI is a true implementation-depth gap: `server/src/routes/openapi.ts` currently serves a 247-path operation inventory with generic responses, while `doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts` already contains a real `OpenAPIRegistry`/`OpenApiGeneratorV3` implementation with request bodies from shared Zod schemas, auth/security fixups, and status overrides. Positive board-claim requires an authenticated-mode instance whose only instance admin is `local-board`; the current disposable server is `local_trusted`, where no challenge is generated. Interactive `connect` intentionally exits in non-TTY mode before any prompts; its network/token/context side effects are covered by scriptable command paths, but the prompt flow itself has not been PTY-tested.
+- Status: PASS with OpenAPI implementation gap confirmed and fixed in the next entry.
+- Output summary: OpenAPI needed to be upgraded from inventory stub to generated schema-backed document. Board-claim positive coverage needs a separate isolated authenticated-mode harness or focused route/service test. Interactive `connect` can be checked with a PTY/script harness if a local board-login challenge can be approved non-interactively.
+- Follow-up: Implement full OpenAPI route from the reference file first, verify and commit, then evaluate scoped board-claim and connect harness options.
+
+### 2026-05-24T14:12:30+02:00 - Full OpenAPI generator implementation
+
+- Command: `pnpm add @asteasolutions/zod-to-openapi@7.3.4 --filter @paperclipai/server`; replaced `server/src/routes/openapi.ts` inventory stub with the schema-backed generator from `doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts`; added route wrapper exports; tightened `server/src/__tests__/openapi-routes.test.ts`; `pnpm exec vitest run server/src/__tests__/openapi-routes.test.ts`; `pnpm --dir server typecheck`; restarted isolated server with the scratch env; `pnpm paperclipai openapi --json`.
+- Purpose: Resolve the final OpenAPI caveat by serving a proper generated OpenAPI document with shared Zod request schemas, auth/security metadata, and response status fixups.
+- Prerequisites/IDs used: Isolated scratch server restarted on `127.0.0.1:3197`; `DATABASE_URL` and `DATABASE_MIGRATION_URL` unset; `PAPERCLIP_HOME`, `PAPERCLIP_CONFIG`, `PAPERCLIP_CONTEXT`, `PAPERCLIP_AUTH_STORE`, `CODEX_HOME`, and `CLAUDE_HOME` all under `tmp/cli-api-parity`.
+- Expected result: `/api/openapi.json` and `paperclipai openapi --json` return OpenAPI 3.0 with schema-backed request bodies, security schemes, public-operation security overrides, and create-operation `201` responses.
+- Actual result: Focused OpenAPI test passed and asserts `BoardSessionAuth`, `BoardApiKeyAuth`, `AgentBearerAuth`, public `/api/health` security `[]`, `POST /api/companies` request body schema, `POST /api/companies` `201` response, and `POST /api/agents/{id}/keys` request body schema. Server typecheck passed. Live CLI returned `{openapi:"3.0.0", pathCount:259, security:["BoardSessionAuth","BoardApiKeyAuth","AgentBearerAuth"], companyCreateRequest:{type:"string",minLength:1}, companyCreateStatus:["201","400","401","403"], agentKeyRequest:{type:"string",minLength:1,default:"default"}}`.
+- Status: PASS after OpenAPI caveat fix.
+- Output summary: Live schema-backed OpenAPI artifact is `tmp/cli-api-parity/artifacts/caveat-followup/openapi-live-schema-backed.json`.
+- Follow-up: Commit the OpenAPI fix, then continue positive board-claim and interactive connect follow-up testing.
 
 ## Bugs And Mismatches
 
@@ -889,16 +911,16 @@ pnpm paperclipai health --json
 
 ### MISMATCH-007 - Public docs/catalog CLI routes missing or inconsistent
 
-- Status: Fixed and live-verified, with remaining OpenAPI schema-depth limitation.
+- Status: Fixed and live-verified.
 - Severity: Medium CLI/API parity gap.
 - Reproduction command: `pnpm paperclipai openapi --json`; `pnpm paperclipai available-skill get cmux --json`; `pnpm paperclipai llm agent-configuration --json`; `pnpm paperclipai llm agent-icons --json`; `pnpm paperclipai llm agent-configuration:adapter process --json`.
 - Expected result: Registered CLI commands map to available API routes and return the OpenAPI document, skill markdown, and LLM prompt docs.
 - Actual result: Initially, `openapi` and all tested `llm` commands returned `404: API route not found`. `available-skill list` returned `cmux` from the real Claude home, but `available-skill get cmux` returned `404: Skill not found`.
 - Suspected cause: LLM routes were mounted at root while the CLI calls `/api/llms`; available-skill discovery used `HOME/.claude/skills` instead of `CLAUDE_HOME`; OpenAPI generation was referenced by CLI/docs but no route was mounted.
 - Files changed: `server/src/app.ts`, `server/src/routes/access.ts`, `server/src/routes/openapi.ts`, `server/src/__tests__/openapi-routes.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
-- Fix summary: Mounted LLM docs routes under `/api`; made available-skill discovery honor `CLAUDE_HOME`, include built-in Paperclip repo skills, and fetch safe skill markdown consistently; added an `/api/openapi.json` route backed by the parity reference path inventory so the documented `openapi` CLI command has a live API target.
-- Verification command: `pnpm exec vitest run server/src/__tests__/llms-routes.test.ts cli/src/__tests__/access-parity.test.ts`; `pnpm --dir server typecheck`; `pnpm --dir cli typecheck`; live `llm` and `available-skill` commands after restart; `pnpm exec vitest run server/src/__tests__/openapi-routes.test.ts`; live `curl http://127.0.0.1:3197/api/openapi.json`; live `pnpm paperclipai openapi --json`.
-- Remaining risk: The new OpenAPI response is operation-inventory level and does not yet include full request/response schemas from the unintegrated zod-to-openapi-style generator in the planning reference.
+- Fix summary: Mounted LLM docs routes under `/api`; made available-skill discovery honor `CLAUDE_HOME`, include built-in Paperclip repo skills, and fetch safe skill markdown consistently; added `/api/openapi.json`, then upgraded it from the initial path inventory to the schema-backed `OpenAPIRegistry`/`OpenApiGeneratorV3` implementation from the parity reference.
+- Verification command: `pnpm exec vitest run server/src/__tests__/llms-routes.test.ts cli/src/__tests__/access-parity.test.ts`; `pnpm --dir server typecheck`; `pnpm --dir cli typecheck`; live `llm` and `available-skill` commands after restart; `pnpm exec vitest run server/src/__tests__/openapi-routes.test.ts`; live `curl http://127.0.0.1:3197/api/openapi.json`; live `pnpm paperclipai openapi --json`; follow-up live schema-backed `paperclipai openapi --json`.
+- Remaining risk: Medium-low; the generator now includes shared Zod request schemas and security metadata, but response schemas remain intentionally generic for most endpoints until the API exports reusable response schemas.
 
 ### BUG-006 - Available skill catalog ignored isolated `CLAUDE_HOME`
 

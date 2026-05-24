@@ -21,5 +21,25 @@ describe("openapi routes", () => {
     expect(res.body.paths["/api/openapi.json"].get.summary).toBe("Get the generated OpenAPI document");
     expect(res.body.paths["/api/companies/{companyId}/agents"].get.summary).toBe("List agents in a company");
     expect(res.body.paths["/api/agents/{id}/keys"].post.summary).toBe("Create an agent API key");
+    expect(res.body.components.securitySchemes).toMatchObject({
+      BoardSessionAuth: { type: "apiKey", in: "cookie" },
+      BoardApiKeyAuth: { type: "http", scheme: "bearer" },
+      AgentBearerAuth: { type: "http", scheme: "bearer" },
+    });
+    expect(res.body.paths["/api/health"].get.security).toEqual([]);
+    expect(res.body.paths["/api/companies"].post.responses["201"]).toBeDefined();
+    expect(res.body.paths["/api/companies"].post.requestBody.content["application/json"].schema).toMatchObject({
+      type: "object",
+      properties: {
+        name: { type: "string", minLength: 1 },
+      },
+      required: ["name"],
+    });
+    expect(res.body.paths["/api/agents/{id}/keys"].post.requestBody.content["application/json"].schema).toMatchObject({
+      type: "object",
+      properties: {
+        name: { type: "string" },
+      },
+    });
   });
 });
