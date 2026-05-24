@@ -432,6 +432,28 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: All fixed UX/parity paths are verified. No invite from this batch remains active.
 - Follow-up: Commit this fix batch and continue unresolved docs/catalog parity gap investigation.
 
+### 2026-05-24T12:28:46+02:00 - Fix LLM docs and available skill catalog isolation
+
+- Command: `pnpm exec vitest run server/src/__tests__/llms-routes.test.ts cli/src/__tests__/access-parity.test.ts`; `pnpm --dir server typecheck`; `pnpm --dir cli typecheck`
+- Purpose: Fix the docs/catalog subset of `MISMATCH-007` that was straightforward and isolation-sensitive.
+- Prerequisites/IDs used: Isolated `CLAUDE_HOME=/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/claude-home`.
+- Expected result: CLI LLM commands reach mounted routes, and available skill discovery does not read the real `~/.claude/skills` when `CLAUDE_HOME` is set.
+- Actual result: Focused tests passed; server and CLI typechecks passed.
+- Status: PASS.
+- Output summary: Mounted `llmRoutes` under `/api` in addition to the existing root mount. Updated available-skill discovery to read `CLAUDE_HOME/skills` when configured, include built-in Paperclip repo skills in `available-skill list`, and allow `available-skill get` for safe listed/built-in skill names.
+- Follow-up: Restart isolated server and live-verify LLM docs plus available skill list/get behavior.
+
+### 2026-05-24T12:30:05+02:00 - Live-verify LLM docs and available skill catalog isolation
+
+- Command: `pnpm paperclipai llm agent-configuration --json`; `pnpm paperclipai llm agent-icons --json`; `pnpm paperclipai llm agent-configuration:adapter process --json`; `pnpm paperclipai available-skill list --json`; `pnpm paperclipai available-skill get paperclip --json`; `pnpm paperclipai available-skill get cmux --json`; `pnpm paperclipai openapi --json`
+- Purpose: Verify docs/catalog fixes on the restarted disposable source-tree server.
+- Prerequisites/IDs used: Same isolated env; server restarted after code changes.
+- Expected result: LLM docs commands pass; built-in Paperclip skills are listed and fetchable; real-user `~/.claude` skills are not listed; `openapi` still documents the unresolved gap if no route exists.
+- Actual result: LLM docs commands passed. `available-skill list` returned Paperclip repo skills such as `diagnose-why-work-stopped`; `available-skill get paperclip` returned markdown. `available-skill get cmux` now returns 404 because `cmux` is no longer listed from the real Claude home. `openapi` still returns `404: API route not found`.
+- Status: MIXED.
+- Output summary: Fixed the LLM route and available-skill isolation/list-get consistency parts of `MISMATCH-007`; `GET /api/openapi.json` remains unresolved.
+- Follow-up: Commit scoped fixes and leave OpenAPI generation as the remaining docs/catalog parity gap.
+
 ## Bugs And Mismatches
 
 ### BUG-001 - `context set` erased existing profile fields
@@ -553,16 +575,29 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 
 ### MISMATCH-007 - Public docs/catalog CLI routes missing or inconsistent
 
-- Status: Not fixed in this pass.
+- Status: Partially fixed; OpenAPI route remains unresolved.
 - Severity: Medium CLI/API parity gap.
 - Reproduction command: `pnpm paperclipai openapi --json`; `pnpm paperclipai available-skill get cmux --json`; `pnpm paperclipai llm agent-configuration --json`; `pnpm paperclipai llm agent-icons --json`; `pnpm paperclipai llm agent-configuration:adapter process --json`.
 - Expected result: Registered CLI commands map to available API routes and return the OpenAPI document, skill markdown, and LLM prompt docs.
-- Actual result: `openapi` and all tested `llm` commands returned `404: API route not found`. `available-skill list` returned `cmux`, but `available-skill get cmux` returned `404: Skill not found`.
-- Suspected cause: CLI wrappers reference routes not mounted in this server mode, or catalog list items are not backed by markdown endpoints.
-- Files changed: none for this mismatch.
-- Fix summary: Not fixed yet; requires deciding whether to add routes, hide commands, or adjust command paths.
-- Verification command: `pnpm paperclipai available-skill list --json`; `pnpm paperclipai available-skill index --json` passed as partial coverage.
-- Remaining risk: CLI advertises docs/catalog commands that fail at runtime.
+- Actual result: Initially, `openapi` and all tested `llm` commands returned `404: API route not found`. `available-skill list` returned `cmux` from the real Claude home, but `available-skill get cmux` returned `404: Skill not found`.
+- Suspected cause: LLM routes were mounted at root while the CLI calls `/api/llms`; available-skill discovery used `HOME/.claude/skills` instead of `CLAUDE_HOME`; OpenAPI generation is referenced by CLI/docs but no route is currently mounted.
+- Files changed: `server/src/app.ts`, `server/src/routes/access.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Mounted LLM docs routes under `/api`; made available-skill discovery honor `CLAUDE_HOME`, include built-in Paperclip repo skills, and fetch safe skill markdown consistently.
+- Verification command: `pnpm exec vitest run server/src/__tests__/llms-routes.test.ts cli/src/__tests__/access-parity.test.ts`; `pnpm --dir server typecheck`; `pnpm --dir cli typecheck`; live `llm` and `available-skill` commands after restart.
+- Remaining risk: `pnpm paperclipai openapi --json` still returns 404. Implementing the full OpenAPI route likely needs restoring or replacing the generator from `doc/plans/2026-05-23-cli-api-parity-openapi-reference.ts` and its missing dependency, rather than a small route mapping fix.
+
+### BUG-006 - Available skill catalog ignored isolated `CLAUDE_HOME`
+
+- Status: Fixed and live-verified.
+- Severity: Medium isolation bug for local E2E runs.
+- Reproduction command: `CLAUDE_HOME=/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/claude-home pnpm paperclipai available-skill list --json`.
+- Expected result: Skill discovery uses the isolated Claude home or built-in repo skills only.
+- Actual result: Before the fix, the list included `cmux` from the real user Claude skills home, and `available-skill get cmux` failed because only a hardcoded Paperclip subset was fetchable.
+- Suspected cause: Server code read `HOME/.claude/skills` directly and did not add built-in Paperclip skills unless they were present in Claude's skills directory.
+- Files changed: `server/src/routes/access.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Use `CLAUDE_HOME/skills` when `CLAUDE_HOME` is set, include built-in Paperclip skills in catalog output, and resolve safe skill markdown from both Claude and Paperclip skills directories.
+- Verification command: live `available-skill list`, `available-skill get paperclip`, and `available-skill get cmux` after restarting the isolated server.
+- Remaining risk: Low; this is runtime environment-sensitive and covered by live isolated verification.
 
 ### MISMATCH-008 - `paperclipai health` is not registered
 

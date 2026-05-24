@@ -139,20 +139,17 @@ function buildCliAuthApprovalPath(challengeId: string, token: string) {
 
 function readSkillMarkdown(skillName: string): string | null {
   const normalized = skillName.trim().toLowerCase();
-  if (
-    normalized !== "paperclip" &&
-    normalized !== "paperclip-create-agent" &&
-    normalized !== "paperclip-create-plugin" &&
-    normalized !== "paperclip-converting-plans-to-tasks" &&
-    normalized !== "para-memory-files"
-  )
+  if (!isSafeSkillName(normalized)) {
     return null;
+  }
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const claudeSkillsDir = resolveClaudeSkillsDir();
   const candidates = [
+    claudeSkillsDir ? path.resolve(claudeSkillsDir, normalized, "SKILL.md") : null,
     path.resolve(moduleDir, "../../skills", normalized, "SKILL.md"), // published: dist/routes/ -> <pkg>/skills/
     path.resolve(process.cwd(), "skills", normalized, "SKILL.md"), // cwd (e.g. monorepo root)
     path.resolve(moduleDir, "../../../skills", normalized, "SKILL.md") // dev: src/routes/ -> repo root/skills/
-  ];
+  ].filter((candidate): candidate is string => Boolean(candidate));
   for (const skillPath of candidates) {
     try {
       return fs.readFileSync(skillPath, "utf8");
@@ -161,6 +158,10 @@ function readSkillMarkdown(skillName: string): string | null {
     }
   }
   return null;
+}
+
+function isSafeSkillName(skillName: string): boolean {
+  return /^[a-z0-9][a-z0-9._-]*$/.test(skillName);
 }
 
 /** Resolve the Paperclip repo skills directory (built-in / managed skills). */
@@ -206,10 +207,17 @@ interface AvailableSkill {
   isPaperclipManaged: boolean;
 }
 
-/** Discover all available Claude Code skills from ~/.claude/skills/. */
+/** Discover all available Claude Code skills from CLAUDE_HOME or ~/.claude. */
+function resolveClaudeSkillsDir(): string {
+  const configuredClaudeHome = process.env.CLAUDE_HOME?.trim();
+  const claudeHome = configuredClaudeHome
+    ? path.resolve(configuredClaudeHome)
+    : path.join(process.env.HOME || process.env.USERPROFILE || "", ".claude");
+  return path.join(claudeHome, "skills");
+}
+
 function listAvailableSkills(): AvailableSkill[] {
-  const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-  const claudeSkillsDir = path.join(homeDir, ".claude", "skills");
+  const claudeSkillsDir = resolveClaudeSkillsDir();
   const paperclipSkillsDir = resolvePaperclipSkillsDir();
 
   // Build set of Paperclip-managed skill names
@@ -241,7 +249,27 @@ function listAvailableSkills(): AvailableSkill[] {
         isPaperclipManaged: paperclipSkillNames.has(entry.name),
       });
     }
-  } catch { /* ~/.claude/skills/ doesn't exist */ }
+  } catch { /* Claude skills directory doesn't exist */ }
+
+  if (paperclipSkillsDir) {
+    const existingNames = new Set(skills.map((skill) => skill.name));
+    try {
+      for (const entry of fs.readdirSync(paperclipSkillsDir, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name.startsWith(".") || existingNames.has(entry.name)) continue;
+        const skillMdPath = path.join(paperclipSkillsDir, entry.name, "SKILL.md");
+        let description = "";
+        try {
+          const md = fs.readFileSync(skillMdPath, "utf8");
+          description = parseSkillFrontmatter(md).description;
+        } catch { /* no SKILL.md or unreadable */ }
+        skills.push({
+          name: entry.name,
+          description,
+          isPaperclipManaged: true,
+        });
+      }
+    } catch { /* skip Paperclip skills directory */ }
+  }
 
   skills.sort((a, b) => a.name.localeCompare(b.name));
   return skills;
