@@ -608,7 +608,31 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: Live verification artifacts are under `tmp/cli-api-parity/artifacts/residual-plugin-after-fix`.
 - Follow-up: Commit BUG-010 fix, then rerun final inventory/status sweep.
 
+### 2026-05-24T13:47:02+02:00 - Routine webhook secret cleanup fix verification
+
+- Command: Final inventory found active managed secret `156c6074-37b7-4f8e-8619-a62027c2147e`; inspected routine trigger secret handling; edited `server/src/services/routines.ts` and `server/src/__tests__/routines-service.test.ts`; ran `pnpm exec vitest run server/src/__tests__/routines-service.test.ts`; `pnpm --dir server typecheck`; restarted isolated server; deleted the older leaked disposable secret; created temporary routine `60ac06c9-f8c4-4cb1-b9fd-ae52163eb3e6`; created webhook trigger `02838bc3-5b48-4f1e-aad0-ca63a48b926b`; deleted the trigger; verified secret `140c2608-0d8e-4f1e-aad0-ca63a48b926b` was absent from `secrets list`; archived the temporary routine.
+- Purpose: Fix and verify cleanup for routine webhook trigger generated secrets.
+- Prerequisites/IDs used: Company `12e9db4b-f66c-459b-959e-d645002240fb`; scratch server restarted with the patched code.
+- Expected result: Deleting a webhook routine trigger removes the generated paperclip-managed secret and binding. No active secrets remain from parity cleanup.
+- Actual result: Focused routine service test and server typecheck passed. Live trigger delete removed the generated secret; final `secrets list` returned `0` rows. The older leaked disposable secret was deleted through the CLI.
+- Status: PASS after BUG-011 fix.
+- Output summary: Artifacts are under `tmp/cli-api-parity/artifacts/routine-secret-cleanup-fix`.
+- Follow-up: Commit BUG-011 fix, then rerun final inventory/status sweep.
+
 ## Bugs And Mismatches
+
+### BUG-011 - Deleting a webhook routine trigger left its managed secret active
+
+- Status: Fixed and live-verified.
+- Severity: Medium resource lifecycle leak.
+- Reproduction command: `routine trigger:create <routine-id> --payload-json '{"kind":"webhook","signingMode":"bearer"}' --json`; `routine trigger:delete <trigger-id> --json`; `secrets list --company-id <company-id> --json`.
+- Expected result: The webhook trigger's generated paperclip-managed secret and binding are removed when the trigger is deleted.
+- Actual result: The trigger was deleted, but the generated secret stayed active with `referenceCount: 1` and description `Webhook auth for routine ...`.
+- Suspected cause: `deleteTrigger()` deleted only the `routine_triggers` row and appended a revision; it did not remove `existing.secretId`.
+- Files changed: `server/src/services/routines.ts`, `server/src/__tests__/routines-service.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: After successful trigger deletion, call `secretsSvc.remove(existing.secretId)` for webhook triggers with managed secrets. Added assertions that deleting a webhook trigger removes both `company_secrets` and `company_secret_bindings` rows.
+- Verification command: `pnpm exec vitest run server/src/__tests__/routines-service.test.ts`; `pnpm --dir server typecheck`; live isolated webhook trigger create/delete; live `secrets list --company-id <company-id> --json`.
+- Remaining risk: Low. If secret removal failed after trigger deletion, the trigger would already be gone; current provider-backed removal path was verified for the local encrypted provider.
 
 ### BUG-010 - Plugin tools were listed but could not execute against a running plugin worker
 
