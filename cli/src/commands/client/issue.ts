@@ -516,7 +516,7 @@ export function registerIssueCommands(program: Command): void {
       .description("Resolve an issue recovery action")
       .argument("<issueId>", "Issue ID")
       .requiredOption("--outcome <outcome>", "restored, false_positive, blocked, or cancelled")
-      .requiredOption("--source-issue-status <status>", "todo, done, in_review, or blocked")
+      .requiredOption("--source-issue-status <status>", "todo, done, or in_review for restored outcomes; blocked is only valid for blocked outcomes")
       .option("--action-id <id>", "Specific recovery action ID")
       .option("--resolution-note <text>", "Resolution note")
       .action(async (issueId: string, opts: IssueRecoveryResolveOptions) => {
@@ -761,7 +761,7 @@ export function registerIssueCommands(program: Command): void {
 
   for (const [name, action, schema, description] of [
     ["interaction:reject", "reject", rejectIssueThreadInteractionSchema, "Reject an issue thread interaction"],
-    ["interaction:cancel", "cancel", cancelIssueThreadInteractionSchema, "Cancel an issue thread interaction"],
+    ["interaction:cancel", "cancel", cancelIssueThreadInteractionSchema, "Cancel an ask_user_questions issue thread interaction"],
   ] as const) {
     addCommonClientOptions(
       issue

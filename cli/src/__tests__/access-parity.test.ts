@@ -36,7 +36,9 @@ describe("access parity commands", () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse()));
     vi.stubGlobal("fetch", fetchMock);
 
+    await run(["health"]);
     await run(["whoami"]);
+    await run(["access", "whoami"]);
     await run(["profile", "session"]);
     await run(["profile", "get"]);
     await run(["profile", "update", "--payload-json", "{}"]);
@@ -44,8 +46,9 @@ describe("access parity commands", () => {
     await run(["invite", "create", "--company-id", COMPANY_ID, "--payload-json", "{}"]);
     await run(["invite", "revoke", INVITE_ID]);
     await run(["invite", "show", "token-1"]);
+    await run(["invite", "test-resolution", "token-1", "--url", "http://localhost:3100/invite/token-1"]);
     await run(["invite", "accept", "token-1"]);
-    await run(["join", "list", "--company-id", COMPANY_ID, "--status", "pending_approval"]);
+    await run(["join", "list", "--company-id", COMPANY_ID, "--status", "pending"]);
     await run(["join", "approve", JOIN_ID, "--company-id", COMPANY_ID]);
     await run(["join", "reject", JOIN_ID, "--company-id", COMPANY_ID]);
     await run(["join", "claim-key", JOIN_ID, "--claim-secret", "secret"]);
@@ -57,6 +60,8 @@ describe("access parity commands", () => {
     await run(["admin", "user", "company-access:update", USER_ID, "--payload-json", "{}"]);
 
     expect(fetchMock.mock.calls.map((call) => [call[1]?.method ?? "GET", call[0]])).toEqual([
+      ["GET", "http://localhost:3100/api/health"],
+      ["GET", "http://localhost:3100/api/cli-auth/me"],
       ["GET", "http://localhost:3100/api/cli-auth/me"],
       ["GET", "http://localhost:3100/api/auth/get-session"],
       ["GET", "http://localhost:3100/api/auth/profile"],
@@ -65,6 +70,7 @@ describe("access parity commands", () => {
       ["POST", `http://localhost:3100/api/companies/${COMPANY_ID}/invites`],
       ["POST", `http://localhost:3100/api/invites/${INVITE_ID}/revoke`],
       ["GET", "http://localhost:3100/api/invites/token-1"],
+      ["GET", "http://localhost:3100/api/invites/token-1/test-resolution?url=http%3A%2F%2Flocalhost%3A3100%2Finvite%2Ftoken-1"],
       ["POST", "http://localhost:3100/api/invites/token-1/accept"],
       ["GET", `http://localhost:3100/api/companies/${COMPANY_ID}/join-requests?status=pending_approval`],
       ["POST", `http://localhost:3100/api/companies/${COMPANY_ID}/join-requests/${JOIN_ID}/approve`],

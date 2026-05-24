@@ -20,22 +20,27 @@ interface QueryOptions extends CompanyOptions {
   query?: string;
   status?: string;
   requestType?: string;
+  url?: string;
 }
 
 export function registerAccessCommands(program: Command): void {
+  addWhoamiCommand(program);
   addCommonClientOptions(
     program
-      .command("whoami")
-      .description("Show current CLI auth identity")
+      .command("health")
+      .description("Check API health")
       .action(async (opts: BaseClientOptions) => {
         try {
           const ctx = resolveCommandContext(opts);
-          printOutput(await ctx.api.get("/api/cli-auth/me"), { json: ctx.json });
+          printOutput(await ctx.api.get("/api/health"), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
       }),
   );
+
+  const access = program.command("access").description("Access and auth inspection operations");
+  addWhoamiCommand(access);
 
   addCommonClientOptions(
     program
@@ -95,7 +100,6 @@ export function registerAccessCommands(program: Command): void {
     ["onboarding", "onboarding"],
     ["onboarding:text", "onboarding.txt"],
     ["skills:index", "skills/index"],
-    ["test-resolution", "test-resolution"],
   ] as const) {
     addCommonClientOptions(
       invite
@@ -110,9 +114,25 @@ export function registerAccessCommands(program: Command): void {
           } catch (err) {
             handleCommandError(err);
           }
-        }),
+      }),
     );
   }
+  addCommonClientOptions(
+    invite
+      .command("test-resolution")
+      .description("Test invite URL resolution")
+      .argument("<token>", "Invite token")
+      .requiredOption("--url <url>", "URL to test")
+      .action(async (token: string, opts: QueryOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          const query = new URLSearchParams({ url: opts.url ?? "" });
+          printOutput(await ctx.api.get(`${apiPath`/api/invites/${token}/test-resolution`}?${query.toString()}`), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
   addCommonClientOptions(
     invite
       .command("skill")
@@ -150,13 +170,14 @@ export function registerAccessCommands(program: Command): void {
       .command("list")
       .description("List join requests")
       .option("-C, --company-id <id>", "Company ID")
-      .option("--status <status>", "Filter by status")
+      .option("--status <status>", "Filter by status (pending_approval, approved, rejected; pending alias accepted)")
       .option("--request-type <type>", "Filter by request type")
       .action(async (opts: QueryOptions) => {
         try {
           const ctx = resolveCommandContext(opts, { requireCompany: true });
           const params = new URLSearchParams();
-          if (opts.status) params.set("status", opts.status);
+          const status = normalizeJoinStatus(opts.status);
+          if (status) params.set("status", status);
           if (opts.requestType) params.set("requestType", opts.requestType);
           const query = params.toString();
           printOutput(await ctx.api.get(`${apiPath`/api/companies/${ctx.companyId}/join-requests`}${query ? `?${query}` : ""}`), { json: ctx.json });
@@ -341,6 +362,27 @@ export function registerAccessCommands(program: Command): void {
         }
       }),
   );
+}
+
+function addWhoamiCommand(parent: Command): void {
+  addCommonClientOptions(
+    parent
+      .command("whoami")
+      .description("Show current CLI auth identity")
+      .action(async (opts: BaseClientOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.get("/api/cli-auth/me"), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+}
+
+function normalizeJoinStatus(status: string | undefined): string | undefined {
+  if (status === "pending") return "pending_approval";
+  return status;
 }
 
 function addSimpleGet(parent: Command, name: string, description: string, path: string): void {

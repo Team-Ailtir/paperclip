@@ -410,6 +410,28 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: No test secrets remain in the company after this verification.
 - Follow-up: Commit the CLI fix and updated log.
 
+### 2026-05-24T12:22:36+02:00 - Fix access, health, invite, join, and issue UX mismatches
+
+- Command: `pnpm exec vitest run cli/src/__tests__/access-parity.test.ts cli/src/__tests__/issue-subresources.test.ts`; `pnpm --dir cli typecheck`
+- Purpose: Verify CLI fixes for `MISMATCH-001`, `MISMATCH-002`, `MISMATCH-003`, `MISMATCH-005`, `MISMATCH-006`, and `MISMATCH-008`.
+- Prerequisites/IDs used: Mismatches from earlier E2E batches.
+- Expected result: `paperclipai health` exists; `paperclipai access whoami` works; `invite test-resolution` has a URL option; `join list --status pending` maps to `pending_approval`; issue help text no longer overstates valid cancel/recovery inputs.
+- Actual result: Focused tests passed with 6 tests; CLI typecheck passed.
+- Status: PASS.
+- Output summary: Added a top-level health command, an `access whoami` alias, `invite test-resolution --url`, pending status normalization, and more precise issue command descriptions.
+- Follow-up: Live-verify changed commands against scratch instance.
+
+### 2026-05-24T12:23:25+02:00 - Live-verify access/health/invite/join fixes
+
+- Command: `pnpm paperclipai health --json`; `pnpm paperclipai access whoami --json`; `pnpm paperclipai join list --company-id 12e9db4b-f66c-459b-959e-d645002240fb --status pending --request-type agent --json`; `pnpm paperclipai invite create --company-id 12e9db4b-f66c-459b-959e-d645002240fb --payload-json '{}' --json`; `pnpm paperclipai invite test-resolution <token> --url https://example.com/invite/<token> --json`; `pnpm paperclipai invite revoke <invite-id> --json`; `pnpm paperclipai issue recovery:resolve --help`; `pnpm paperclipai issue interaction:cancel --help`
+- Purpose: Verify fixed commands on the disposable instance and confirm help text updates.
+- Prerequisites/IDs used: Company `12e9db4b-f66c-459b-959e-d645002240fb`; disposable invite `57d7fb29-e29e-4327-9d11-7be325831da6` revoked after test. A first test-resolution attempt against `http://127.0.0.1:3197/...` intentionally hit the server's private-address guard and was replaced with a public HTTPS URL.
+- Expected result: Health and alias commands pass; pending alias is accepted; invite test-resolution sends the URL query and returns route data; help text mentions the narrower constraints.
+- Actual result: `health`, `access whoami`, and `join list --status pending` passed. Public invite resolution returned `status: reachable`, method `HEAD`, HTTP `404` from `example.com`, proving the command now supplies the URL. Invite was revoked. Help output includes `todo, done, or in_review for restored outcomes; blocked is only valid for blocked outcomes` and `Cancel an ask_user_questions issue thread interaction`.
+- Status: PASS.
+- Output summary: All fixed UX/parity paths are verified. No invite from this batch remains active.
+- Follow-up: Commit this fix batch and continue unresolved docs/catalog parity gap investigation.
+
 ## Bugs And Mismatches
 
 ### BUG-001 - `context set` erased existing profile fields
@@ -427,16 +449,16 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 
 ### MISMATCH-001 - Documented `access whoami` command is not registered
 
-- Status: Not fixed in this pass.
+- Status: Fixed and live-verified.
 - Severity: Low command UX/docs drift.
 - Reproduction command: `pnpm paperclipai access whoami --json`.
 - Expected result: Access identity command succeeds as documented in the runbook.
 - Actual result: CLI exits with `unknown command 'access'`.
 - Suspected cause: `registerAccessCommands` registers `whoami` as a top-level command, not under an `access` group.
-- Files changed: none.
-- Fix summary: Not fixed; the implemented top-level `whoami` command is functional, and this pass is prioritizing functional parity bugs.
-- Verification command: `pnpm paperclipai whoami --json`.
-- Remaining risk: Docs/runbook users may try a stale command shape.
+- Files changed: `cli/src/commands/client/access.ts`, `cli/src/__tests__/access-parity.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Added `paperclipai access whoami` as an alias for the existing top-level `whoami` command.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/access-parity.test.ts`; `pnpm --dir cli typecheck`; `pnpm paperclipai access whoami --json`.
+- Remaining risk: Low.
 
 ### BUG-002 - `issue interaction:accept` rejected omitted optional selected keys
 
@@ -466,29 +488,29 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 
 ### MISMATCH-002 - `issue interaction:cancel` command is generic but API only cancels questions
 
-- Status: Not fixed in this pass.
+- Status: Fixed help text.
 - Severity: Low command UX drift.
 - Reproduction command: `pnpm paperclipai issue interaction:cancel <issue-id> <request-confirmation-interaction-id> --reason "..." --json`.
 - Expected result: Either the command help states it only applies to `ask_user_questions`, or request confirmations expose a cancel/supersede flow.
 - Actual result: API returns `422: Only ask_user_questions interactions can be cancelled`.
 - Suspected cause: CLI command name/help is generic while server service method is `cancelQuestions`.
-- Files changed: none for this mismatch.
-- Fix summary: Not fixed yet; adapted E2E to cancel an `ask_user_questions` interaction.
-- Verification command: `pnpm paperclipai issue interaction:cancel <issue-id> <ask-user-questions-interaction-id> --reason "Cancelled by CLI parity" --json`.
-- Remaining risk: Users may try to cancel a request confirmation because the CLI help does not mention the kind restriction.
+- Files changed: `cli/src/commands/client/issue.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Updated command description to say it cancels an `ask_user_questions` interaction.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/issue-subresources.test.ts`; `pnpm --dir cli typecheck`; `pnpm paperclipai issue interaction:cancel --help`.
+- Remaining risk: Low; server still enforces the interaction kind.
 
 ### MISMATCH-003 - `issue recovery:resolve` help overstates valid restored statuses
 
-- Status: Not fixed in this pass.
+- Status: Fixed help text.
 - Severity: Low command UX drift.
 - Reproduction command: `pnpm paperclipai issue recovery:resolve <issue-id> --action-id <action-id> --outcome restored --source-issue-status blocked --json`.
 - Expected result: Help text and validation agree on valid source statuses for `restored` outcomes.
 - Actual result: Help says `--source-issue-status` accepts `todo, done, in_review, or blocked`; validator rejects `blocked` for `--outcome restored` with `Restored recovery actions must move the source issue to todo, done, or in_review`.
 - Suspected cause: CLI option description lists the broad enum rather than outcome-specific constraints.
-- Files changed: none for this mismatch.
-- Fix summary: Not fixed yet; adapted E2E to `--source-issue-status todo`, which resolved recovery action `1151475f-c97f-456b-9c6a-8e0f936abe05`.
-- Verification command: `pnpm paperclipai issue recovery:resolve <issue-id> --action-id <action-id> --outcome restored --source-issue-status todo --json`.
-- Remaining risk: Users may choose a status shown in help that is invalid for their selected outcome.
+- Files changed: `cli/src/commands/client/issue.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Updated option description to state `blocked` is only valid for blocked outcomes.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/issue-subresources.test.ts`; `pnpm --dir cli typecheck`; `pnpm paperclipai issue recovery:resolve --help`.
+- Remaining risk: Low; validation remains server-side/schema-driven.
 
 ### MISMATCH-004 - `agent instructions-path:update` help does not expose process adapter requirements
 
@@ -505,29 +527,29 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 
 ### MISMATCH-005 - `invite test-resolution` omits required URL query
 
-- Status: Not fixed in this pass.
+- Status: Fixed and live-verified.
 - Severity: Low command/API parity bug.
 - Reproduction command: `pnpm paperclipai invite test-resolution <invite-token> --json`.
 - Expected result: Command either supplies a documented URL option or the API accepts token-only resolution testing.
 - Actual result: API returns `400: url query parameter is required`.
 - Suspected cause: CLI wrapper maps `invite test-resolution <token>` directly to `/api/invites/:token/test-resolution` without any `url` query option.
-- Files changed: none for this mismatch.
-- Fix summary: Not fixed yet; skipped the command after verifying the failure and revoked the disposable invite.
-- Verification command: none beyond reproduction.
-- Remaining risk: Users cannot exercise invite resolution testing from the current CLI shape.
+- Files changed: `cli/src/commands/client/access.ts`, `cli/src/__tests__/access-parity.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Added required `--url <url>` option and forwards it as the `url` query parameter.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/access-parity.test.ts`; `pnpm --dir cli typecheck`; `pnpm paperclipai invite test-resolution <token> --url https://example.com/invite/<token> --json`.
+- Remaining risk: Low; local/private URLs are still rejected by the API guard as intended.
 
 ### MISMATCH-006 - `join list --status pending` is rejected; API expects `pending_approval`
 
-- Status: Not fixed in this pass.
+- Status: Fixed and live-verified.
 - Severity: Low command UX drift.
 - Reproduction command: `pnpm paperclipai join list --company-id <company-id> --status pending --request-type agent --json`.
 - Expected result: Help or docs clarify valid join statuses, or common alias `pending` is accepted.
 - Actual result: API validation rejects `pending`; valid values include `pending_approval`, `approved`, and `rejected`.
 - Suspected cause: CLI exposes a free-form status string with no enum guidance.
-- Files changed: none for this mismatch.
-- Fix summary: Not fixed yet; adapted E2E to `--status pending_approval`.
-- Verification command: `pnpm paperclipai join list --company-id <company-id> --status pending_approval --request-type agent --json`.
-- Remaining risk: Users may guess `pending` from common CLI vocabulary and hit validation errors.
+- Files changed: `cli/src/commands/client/access.ts`, `cli/src/__tests__/access-parity.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: `join list --status pending` now normalizes to `pending_approval`; help lists canonical statuses.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/access-parity.test.ts`; `pnpm --dir cli typecheck`; `pnpm paperclipai join list --company-id <company-id> --status pending --request-type agent --json`.
+- Remaining risk: Low.
 
 ### MISMATCH-007 - Public docs/catalog CLI routes missing or inconsistent
 
@@ -544,16 +566,16 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 
 ### MISMATCH-008 - `paperclipai health` is not registered
 
-- Status: Not fixed in this pass.
+- Status: Fixed and live-verified.
 - Severity: Low command/API parity gap.
 - Reproduction command: `pnpm paperclipai health --json`.
 - Expected result: The CLI has a documented health command, or docs consistently direct users to `curl <api-url>/api/health`.
 - Actual result: Commander returned `unknown command 'health'`.
 - Suspected cause: Health checking exists as an API endpoint and setup/doctor workflow, but not as a CLI client command.
-- Files changed: none for this mismatch.
-- Fix summary: Not fixed yet; E2E used `curl -sf http://127.0.0.1:3197/api/health`.
-- Verification command: `curl -sf http://127.0.0.1:3197/api/health`.
-- Remaining risk: Runbooks or smoke-test expectations that call `paperclipai health` fail even when the server is healthy.
+- Files changed: `cli/src/commands/client/access.ts`, `cli/src/__tests__/access-parity.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Added a top-level `health` command that calls `/api/health`.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/access-parity.test.ts`; `pnpm --dir cli typecheck`; `pnpm paperclipai health --json`.
+- Remaining risk: Low.
 
 ### BUG-004 - Creating a second local environment returned 500 instead of conflict
 
