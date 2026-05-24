@@ -758,6 +758,17 @@ pnpm paperclipai health --json
 - Output summary: OpenAPI caveat fixed in commit `1ab85cb5`; positive board-claim caveat covered in commit `678fd3a8`; interactive connect caveat covered in commit `40480f38`.
 - Follow-up: Commit this final log-only status entry.
 
+### 2026-05-24T14:22:00+02:00 - Detached scratch server continuation
+
+- Command: Stopped the foreground scratch server process; started the same runbook command in detached screen session `paperclip-cli-parity`; verified `pnpm paperclipai health --json`; checked `lsof -nP -iTCP:3197 -sTCP:LISTEN`; checked `screen -ls`.
+- Purpose: Leave the disposable instance running without tying it to the active tool session.
+- Prerequisites/IDs used: Same scratch env and unset database variables; detached screen session `91568.paperclip-cli-parity`.
+- Expected result: Server continues running on non-default port `3197` with the same isolated home/config/context/auth paths.
+- Actual result: Health returned `status:"ok"` with deployment mode `local_trusted`; `node` PID `91583` is listening on `127.0.0.1:3197`; `screen -ls` shows detached session `91568.paperclip-cli-parity`.
+- Status: PASS.
+- Output summary: Detached server log is `tmp/cli-api-parity/artifacts/caveat-followup/server-screen.log`.
+- Follow-up: Manual continuation can use the same env block and `screen -r paperclip-cli-parity` to inspect the server session.
+
 ## Bugs And Mismatches
 
 ### BUG-011 - Deleting a webhook routine trigger left its managed secret active
