@@ -575,7 +575,53 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: This is a help-only CLI change; no scratch instance resources were created.
 - Follow-up: Commit the help fix, then continue residual command coverage.
 
+### 2026-05-24T13:33:50+02:00 - Residual company and skill command coverage
+
+- Command: `company stats`; disposable `company create`; `company branding:update`; `company archive`; `company delete`; `company export:preview`; `company export:api`; `company import:preview`; `company import:apply`; cleanup `company delete`; `skill import`; cleanup `skill delete`.
+- Purpose: Cover company subcommands and `skill import` not explicitly exercised in earlier batches.
+- Prerequisites/IDs used: Company `12e9db4b-f66c-459b-959e-d645002240fb`; disposable archive company `342c1b91-0f48-4a63-a9c5-fc7ffc758483`; raw-import company `dab6758c-dd30-4066-87f0-4df76bd21ea5`; imported skill `be9538e4-9827-426f-b82a-4228c5d3f851`.
+- Expected result: Company stats read succeeds; disposable company can be branded, archived, and deleted; raw API portability commands work with API-shaped payloads; skill import from a local repo skill path succeeds and the imported skill can be deleted.
+- Actual result: Company stats passed. Disposable company branding/archive/delete passed. First raw export attempt using CLI wrapper-style `{"include":["company"]}` returned expected API validation `include` object error, so the test was adapted to raw API shape `{"include":{"company":true}}`; export preview and export API then passed. Full exported package import via a shell variable was abandoned because markdown code fences in the large JSON payload caused shell transport issues; a minimal inline company package was used instead, and raw import preview/apply/delete passed. `skill import` imported one local skill and cleanup delete passed.
+- Status: PASS after adapting raw API payload shape.
+- Output summary: Artifacts are under `tmp/cli-api-parity/artifacts/residual-company-skill`. No disposable company or imported skill from this batch remains active.
+- Follow-up: Continue advanced plugin surface coverage.
+
+### 2026-05-24T13:37:45+02:00 - Advanced plugin command coverage and tool-dispatch failure
+
+- Command: Installed bundled kitchen-sink plugin; `plugin list/inspect/health/logs/config/jobs/job:runs/job:trigger/webhook/dashboard/bridge:data/data/action/local-folders/upgrade/disable/enable/uninstall`; initial `plugin config:test/config:set/bridge:action/tool:execute/local-folder:*` attempts; corrected `config:test`, `config:set`, and `bridge:action`; final uninstall.
+- Purpose: Exercise plugin command surfaces that require a plugin declaring jobs, webhooks, tools, bridge handlers, and UI contributions.
+- Prerequisites/IDs used: Bundled plugin path `packages/plugins/examples/plugin-kitchen-sink-example`; company `12e9db4b-f66c-459b-959e-d645002240fb`; project `d32032ce-d95e-4c4e-a942-dd98498025fb`; agent `1dd601a1-031a-4225-b005-419427fd059f`; run `9c686a91-c88a-47aa-9326-a889c4281d2b`.
+- Expected result: Plugin installs, exposes its manifest surfaces, handles job/webhook/bridge/data/action calls, rejects unsupported stream/local-folder calls cleanly, and uninstalls. Tool execution should work for the listed kitchen-sink echo tool.
+- Actual result: Install/list/inspect/health/logs/config/jobs/job:runs/job:trigger/webhook/dashboard/bridge:data/data/action/upgrade/disable/enable/uninstall passed. Config commands initially failed until payloads were corrected to `{"configJson":{...}}`; bridge action initially failed until payload used `key` instead of `action`. `bridge:stream` returned expected `Plugin stream bridge is not enabled`. Local-folder calls returned expected validation because the kitchen-sink manifest declares no local folders. `plugin tools` listed `paperclip-kitchen-sink-example:echo`, but `plugin tool:execute` returned `502: worker for plugin "paperclip-kitchen-sink-example" is not running` even though bridge calls to the same plugin worker succeeded.
+- Status: PASS for safe plugin surfaces; FAIL for `plugin tool:execute`, recorded as BUG-010.
+- Output summary: Artifacts are under `tmp/cli-api-parity/artifacts/residual-plugin` and `tmp/cli-api-parity/artifacts/residual-plugin-corrected`. The kitchen-sink plugin was uninstalled after each batch.
+- Follow-up: Fix BUG-010 and rerun `plugin tool:execute` live.
+
+### 2026-05-24T13:41:40+02:00 - Plugin tool-dispatch fix verification
+
+- Command: Edited `server/src/services/plugin-tool-dispatcher.ts`, `server/src/services/plugin-loader.ts`, and `server/src/__tests__/plugin-database.test.ts`; ran `pnpm exec vitest run server/src/__tests__/plugin-database.test.ts`; `pnpm --dir server typecheck`; restarted the isolated server; installed kitchen-sink plugin; `plugin tools`; `plugin tool:execute --payload-json '{"tool":"paperclip-kitchen-sink-example:echo",...}'`; cleanup `plugin uninstall --force`.
+- Purpose: Verify plugin tool execution uses the plugin database ID for worker lookup while preserving plugin-key namespaced tool names.
+- Prerequisites/IDs used: Same scratch server and kitchen-sink plugin; tool `paperclip-kitchen-sink-example:echo`.
+- Expected result: The listed echo tool dispatches to the running kitchen-sink worker and returns the echo result.
+- Actual result: Focused test and server typecheck passed. After restart, `plugin tools` listed `paperclip-kitchen-sink-example:echo`; `plugin tool:execute` returned `content: "CLI parity tool after fix"` and the expected run context. The plugin was uninstalled and `plugin list` returned `[]`.
+- Status: PASS after BUG-010 fix.
+- Output summary: Live verification artifacts are under `tmp/cli-api-parity/artifacts/residual-plugin-after-fix`.
+- Follow-up: Commit BUG-010 fix, then rerun final inventory/status sweep.
+
 ## Bugs And Mismatches
+
+### BUG-010 - Plugin tools were listed but could not execute against a running plugin worker
+
+- Status: Fixed and live-verified.
+- Severity: Medium plugin CLI/API parity bug.
+- Reproduction command: Install `packages/plugins/examples/plugin-kitchen-sink-example`, then run `pnpm paperclipai plugin tool:execute --payload-json '{"tool":"paperclip-kitchen-sink-example:echo","parameters":{"message":"CLI parity tool"},"runContext":{"companyId":"<company-id>","projectId":"<project-id>","agentId":"<agent-id>","runId":"<run-id>"}}' --json`.
+- Expected result: The listed tool dispatches to the running kitchen-sink worker and returns a `ToolResult`.
+- Actual result: `plugin tools` listed `paperclip-kitchen-sink-example:echo`, and bridge data/action calls to the same plugin worker succeeded, but `tool:execute` returned `502: Cannot execute tool ... worker for plugin "paperclip-kitchen-sink-example" is not running`.
+- Suspected cause: `plugin-loader` registered tools with only the plugin key, so `RegisteredTool.pluginDbId` defaulted to the plugin key. `plugin-worker-manager` tracks running workers by database plugin UUID, so the dispatcher looked up the wrong worker ID.
+- Files changed: `server/src/services/plugin-tool-dispatcher.ts`, `server/src/services/plugin-loader.ts`, `server/src/__tests__/plugin-database.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Extended `registerPluginTools` to accept an optional database plugin ID, passed the database ID from the plugin loader, and added regression coverage that plugin activation registers manifest-key namespaced tools with the database ID for worker lookup.
+- Verification command: `pnpm exec vitest run server/src/__tests__/plugin-database.test.ts`; `pnpm --dir server typecheck`; restarted isolated server; live kitchen-sink `plugin tools`; live `plugin tool:execute`; cleanup `plugin uninstall --force`.
+- Remaining risk: Low; lifecycle DB-backed registration already used the database ID, and this aligns initial loader registration with that path.
 
 ### BUG-009 - `token agent list --agent <agent-id>` failed even when the agent exists
 
