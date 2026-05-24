@@ -747,6 +747,17 @@ pnpm paperclipai health --json
 - Output summary: Interactive `connect` no longer has an untested command-flow caveat. Remaining real-browser/device approval behavior is covered by lower-level CLI auth challenge route tests and scriptable auth commands, not by manually approving in this terminal.
 - Follow-up: Commit the connect flow coverage, then rerun final status and isolation checks.
 
+### 2026-05-24T14:19:04+02:00 - Caveat follow-up final status
+
+- Command: `pnpm paperclipai health --json`; `pnpm paperclipai openapi --json`; `lsof -nP -iTCP:3197 -sTCP:LISTEN`; `git status --short --branch`, all with the scratch `PAPERCLIP_*`, `CODEX_HOME`, and `CLAUDE_HOME` environment and with `DATABASE_URL`/`DATABASE_MIGRATION_URL` unset.
+- Purpose: Confirm the three caveats are no longer unresolved after the follow-up fixes and coverage.
+- Prerequisites/IDs used: Isolated scratch server restarted from local source on `127.0.0.1:3197`; PID `84908`; same `tmp/cli-api-parity` home/config/context/auth paths.
+- Expected result: Scratch server is healthy; OpenAPI is schema-backed; git has no code changes before this final log entry; the only remaining difference is this log update.
+- Actual result: Health returned `status:"ok"`, version `0.3.1`, deployment mode `local_trusted`, exposure `private`, auth ready, bootstrap ready. OpenAPI returned `{openapi:"3.0.0", pathCount:259, security:["BoardSessionAuth","BoardApiKeyAuth","AgentBearerAuth"], companyCreateStatus:["201","400","401","403"]}`. `node` PID `84908` is listening on `127.0.0.1:3197`. Git status was clean before this final log update.
+- Status: PASS.
+- Output summary: OpenAPI caveat fixed in commit `1ab85cb5`; positive board-claim caveat covered in commit `678fd3a8`; interactive connect caveat covered in commit `40480f38`.
+- Follow-up: Commit this final log-only status entry.
+
 ## Bugs And Mismatches
 
 ### BUG-011 - Deleting a webhook routine trigger left its managed secret active
