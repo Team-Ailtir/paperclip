@@ -377,6 +377,39 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: Confirms the live CLI/API path now exercises the fixed route behavior.
 - Follow-up: Continue remaining parity/fix pass.
 
+### 2026-05-24T12:17:05+02:00 - Environment, plugin, and secrets lifecycle coverage
+
+- Command: `pnpm paperclipai environment create/get/leases/probe/update/delete ... --json`; `pnpm paperclipai plugin install/list/inspect/health/config/jobs/local-folders/ui-contributions/disable/enable/uninstall ... --json`; `pnpm paperclipai secrets list/create/link/declarations/migrate-inline-env ... --json`
+- Purpose: Add positive non-local environment coverage, plugin lifecycle coverage, and deeper secrets coverage.
+- Prerequisites/IDs used: Company `12e9db4b-f66c-459b-959e-d645002240fb`; bundled plugin path `/Users/aronprins/Documents/PaperclipAI/paperclip/packages/plugins/plugin-workspace-diff`; temporary SSH environment `cc5ae311-13f5-42b8-8044-11065b4e1af0`; temporary plugin install `e8421ed5-c103-4950-afb7-1463a0fbb9c5`; temporary secret `20c74546-7bec-4766-80cd-0b6c57545f7d`.
+- Expected result: SSH environment can be created, read, updated, and deleted; SSH probe can fail gracefully when local SSH is unavailable; bundled plugin can install and uninstall in the isolated instance; managed secret can be created and inspected through supported CLI flows.
+- Actual result: SSH environment create/get/leases/update/delete passed; probe returned structured `ok: false` with connection refused, as expected on this host. Plugin install/list/inspect/health/config/jobs/local-folders/ui-contributions/disable/enable/uninstall passed; final plugin list returned `[]`. Secret create/list/declarations/migrate-inline-env dry-run passed. `secrets link --provider local_encrypted --external-ref ...` returned `400: local_encrypted does not support external reference secrets`, which is expected provider behavior. The batch exposed missing CLI wrappers for secret update/rotate/usage/access-events/delete.
+- Status: MIXED.
+- Output summary: New fixed parity gap recorded as `BUG-005`. Plugin was uninstalled; SSH environment was deleted; one managed secret remained briefly for lifecycle verification.
+- Follow-up: Add missing secret lifecycle CLI commands, then update/rotate/inspect/delete the temporary secret through the new CLI paths.
+
+### 2026-05-24T12:19:37+02:00 - Fix missing secret lifecycle CLI commands
+
+- Command: `pnpm exec vitest run cli/src/__tests__/secrets.test.ts`; `pnpm --dir cli typecheck`
+- Purpose: Verify the CLI wrappers for API-backed secret update, rotate, usage, access events, and delete.
+- Prerequisites/IDs used: `BUG-005` parity gap from OpenAPI reference and E2E.
+- Expected result: Commands map to `PATCH /api/secrets/:id`, `POST /api/secrets/:id/rotate`, `GET /api/secrets/:id/usage`, `GET /api/secrets/:id/access-events`, and `DELETE /api/secrets/:id`.
+- Actual result: Focused CLI secrets test passed with 8 tests; CLI typecheck passed.
+- Status: PASS.
+- Output summary: Added destructive delete confirmation via `--yes --confirm <secret-id>`.
+- Follow-up: Run new commands against temporary scratch secret.
+
+### 2026-05-24T12:20:20+02:00 - Live-verify new secret lifecycle commands
+
+- Command: `pnpm paperclipai secrets update 20c74546-7bec-4766-80cd-0b6c57545f7d --payload-json ... --json`; `pnpm paperclipai secrets rotate 20c74546-7bec-4766-80cd-0b6c57545f7d --value ... --json`; `pnpm paperclipai secrets usage 20c74546-7bec-4766-80cd-0b6c57545f7d --json`; `pnpm paperclipai secrets access-events 20c74546-7bec-4766-80cd-0b6c57545f7d --json`; `pnpm paperclipai secrets delete 20c74546-7bec-4766-80cd-0b6c57545f7d --yes --confirm 20c74546-7bec-4766-80cd-0b6c57545f7d --json`; `pnpm paperclipai secrets list --company-id 12e9db4b-f66c-459b-959e-d645002240fb --json`
+- Purpose: Verify fixed commands against the live disposable instance and clean up the temporary managed secret.
+- Prerequisites/IDs used: Temporary secret `20c74546-7bec-4766-80cd-0b6c57545f7d`.
+- Expected result: Update/rotate/usage/access-events/delete all succeed; final list is empty.
+- Actual result: All new commands passed. Usage returned no bindings, access-events returned `[]`, delete returned `{ "ok": true }`, and final list returned `[]`.
+- Status: PASS.
+- Output summary: No test secrets remain in the company after this verification.
+- Follow-up: Commit the CLI fix and updated log.
+
 ## Bugs And Mismatches
 
 ### BUG-001 - `context set` erased existing profile fields
@@ -534,3 +567,16 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Fix summary: Added a route-level pre-insert check that throws `409` when a local environment already exists for the company; added regression coverage.
 - Verification command: `pnpm exec vitest run server/src/__tests__/environment-routes.test.ts`; `pnpm --dir server typecheck`; restarted isolated server and reran the reproduction command, which now returns `409`.
 - Remaining risk: Low; create flow for non-local environment drivers still needs separate positive coverage.
+
+### BUG-005 - Secret lifecycle API endpoints lacked CLI wrappers
+
+- Status: Fixed and live-verified.
+- Severity: Medium CLI/API parity gap.
+- Reproduction command: `pnpm paperclipai secrets --help` did not expose commands for `PATCH /api/secrets/:id`, `POST /api/secrets/:id/rotate`, `GET /api/secrets/:id/usage`, `GET /api/secrets/:id/access-events`, or `DELETE /api/secrets/:id`.
+- Expected result: CLI can update, rotate, inspect usage/access events, and delete a secret, matching the OpenAPI parity reference.
+- Actual result: CLI only supported list/create/link/provider/import/declaration/migration commands; a disposable managed secret could be created but not cleaned up through CLI.
+- Suspected cause: Secret provider/import commands were added without completing the single-secret lifecycle wrapper set.
+- Files changed: `cli/src/commands/client/secrets.ts`, `cli/src/__tests__/secrets.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Added `secrets update`, `secrets rotate`, `secrets usage`, `secrets access-events`, and guarded `secrets delete --yes --confirm <secret-id>` commands.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/secrets.test.ts`; `pnpm --dir cli typecheck`; live scratch commands for update/rotate/usage/access-events/delete.
+- Remaining risk: Low; `secrets link` remains provider-dependent and correctly rejects `local_encrypted` external references.

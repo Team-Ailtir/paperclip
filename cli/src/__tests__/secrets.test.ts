@@ -298,6 +298,25 @@ describe("secrets API parity commands", () => {
       ["POST", "http://localhost:3100/api/companies/company-1/secrets/remote-import"],
     ]);
   });
+
+  it("wraps secret metadata, rotation, usage, access event, and delete endpoints", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse()));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runSecretCommand(["secrets", "update", "secret-1", "--payload-json", "{\"description\":\"updated\"}"]);
+    await runSecretCommand(["secrets", "rotate", "secret-1", "--value", "new-value"]);
+    await runSecretCommand(["secrets", "usage", "secret-1"]);
+    await runSecretCommand(["secrets", "access-events", "secret-1"]);
+    await runSecretCommand(["secrets", "delete", "secret-1", "--yes", "--confirm", "secret-1"]);
+
+    expect(fetchMock.mock.calls.map((call) => [call[1]?.method ?? "GET", call[0]])).toEqual([
+      ["PATCH", "http://localhost:3100/api/secrets/secret-1"],
+      ["POST", "http://localhost:3100/api/secrets/secret-1/rotate"],
+      ["GET", "http://localhost:3100/api/secrets/secret-1/usage"],
+      ["GET", "http://localhost:3100/api/secrets/secret-1/access-events"],
+      ["DELETE", "http://localhost:3100/api/secrets/secret-1"],
+    ]);
+  });
 });
 
 async function runSecretCommand(args: string[]): Promise<void> {

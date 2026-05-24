@@ -41,6 +41,20 @@ interface SecretCreateOptions extends BaseClientOptions {
   description?: string;
 }
 
+interface SecretUpdateOptions extends BaseClientOptions {
+  payloadJson?: string;
+}
+
+interface SecretRotateOptions extends BaseClientOptions {
+  value?: string;
+  valueEnv?: string;
+}
+
+interface SecretDeleteOptions extends BaseClientOptions {
+  yes?: boolean;
+  confirm?: string;
+}
+
 interface SecretLinkOptions extends BaseClientOptions {
   companyId?: string;
   name?: string;
@@ -177,7 +191,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function readValueFromOptions(opts: SecretCreateOptions): string {
+function readValueFromOptions(opts: { value?: string; valueEnv?: string }): string {
   if (opts.value !== undefined && opts.valueEnv !== undefined) {
     throw new Error("Use only one of --value or --value-env.");
   }
@@ -448,6 +462,90 @@ export function registerSecretCommands(program: Command): void {
             description: opts.description,
           });
           printOutput(ctx.json ? created : renderSecret(created!), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+
+  addCommonClientOptions(
+    secrets
+      .command("update")
+      .description("Update secret metadata")
+      .argument("<secretId>", "Secret ID")
+      .requiredOption("--payload-json <json>", "UpdateSecret JSON payload")
+      .action(async (secretId: string, opts: SecretUpdateOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.patch(apiPath`/api/secrets/${secretId}`, parseJson(opts.payloadJson ?? "{}")), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+
+  addCommonClientOptions(
+    secrets
+      .command("rotate")
+      .description("Rotate a Paperclip-managed secret value")
+      .argument("<secretId>", "Secret ID")
+      .option("--value <value>", "New secret value")
+      .option("--value-env <name>", "Read new secret value from an environment variable")
+      .action(async (secretId: string, opts: SecretRotateOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.post(apiPath`/api/secrets/${secretId}/rotate`, { value: readValueFromOptions(opts) }), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+
+  addCommonClientOptions(
+    secrets
+      .command("usage")
+      .description("Show where a secret is referenced")
+      .argument("<secretId>", "Secret ID")
+      .action(async (secretId: string, opts: BaseClientOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.get(apiPath`/api/secrets/${secretId}/usage`), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+
+  addCommonClientOptions(
+    secrets
+      .command("access-events")
+      .description("List secret access events")
+      .argument("<secretId>", "Secret ID")
+      .action(async (secretId: string, opts: BaseClientOptions) => {
+        try {
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.get(apiPath`/api/secrets/${secretId}/access-events`), { json: ctx.json });
+        } catch (err) {
+          handleCommandError(err);
+        }
+      }),
+  );
+
+  addCommonClientOptions(
+    secrets
+      .command("delete")
+      .description("Delete a secret")
+      .argument("<secretId>", "Secret ID")
+      .option("--yes", "Required safety flag to confirm destructive action", false)
+      .option("--confirm <secretId>", "Repeat the secret ID to confirm deletion")
+      .action(async (secretId: string, opts: SecretDeleteOptions) => {
+        try {
+          if (!opts.yes) throw new Error("Deletion requires --yes.");
+          if (opts.confirm !== secretId) {
+            throw new Error("Deletion requires --confirm <secretId> matching the secret ID.");
+          }
+          const ctx = resolveCommandContext(opts);
+          printOutput(await ctx.api.delete(apiPath`/api/secrets/${secretId}`), { json: ctx.json });
         } catch (err) {
           handleCommandError(err);
         }
