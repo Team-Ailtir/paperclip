@@ -311,6 +311,28 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: `budget incident:resolve` was not run because no budget incident was created by this safe smoke path.
 - Follow-up: Continue access/profile/invite/admin/instance/sidebar/inbox/auth domains.
 
+### 2026-05-24T12:02:45+02:00 - Access, profile, invite, admin, instance, sidebar, inbox, and auth challenge pass
+
+- Command: `whoami`; `auth whoami`; `profile session/get/update/company-user`; `invite create/list/show/onboarding/onboarding:text/skills:index/skill/logo/revoke`; `join list/reject`; `member list/user-directory/update/permissions/role-and-grants/archive`; `admin user list/company-access/company-access:update`; `instance scheduler-heartbeats/settings:general/settings:general:update/settings:experimental/settings:experimental:update/database-backup`; `sidebar preferences/preferences:update/project-preferences/project-preferences:update/badges`; `inbox dismissals/dismiss`; `auth challenge create/get/cancel/approve`; `auth logout`
+- Purpose: Exercise board access, current profile, disposable invite, member/admin, instance settings, sidebar, inbox, and auth challenge surfaces.
+- Prerequisites/IDs used: company `12e9db4b-f66c-459b-959e-d645002240fb`; member `373f91e2-a433-46ee-8362-e61ab5e06593`; user `local-board`; project `d32032ce-d95e-4c4e-a942-dd98498025fb`; approval `c7f19d1c-fcb3-4e4d-87a7-e8a248a9eb09`.
+- Expected result: Read commands return JSON; no-op updates preserve scratch user/company access; disposable invites/challenges are revoked/cancelled/approved; unsafe self-removal is rejected.
+- Actual result: Identity/profile/session commands passed. Profile update preserved name `Board`. Disposable invite `b3317c94-4e46-4ceb-9a5f-6df179c4f77e` was created, inspected through show/onboarding/onboarding text/skills index/skill, then revoked. `invite logo` was treated as optional because the company has no logo. Join list passed; two disposable pending join requests were rejected during cleanup. Member list/user-directory/update/permissions/role-and-grants passed; self archive returned expected `403: You cannot remove yourself`. Admin user list/company-access/company-access:update passed with the same company ID. Instance settings read/no-op update and database backup passed. Sidebar preferences/project preferences/badges and inbox dismissal passed. Auth challenge cancel `a52af778-39c1-41a4-8f87-46fd7b100d16` and approve `70b51e40-e6d4-4e01-ae5d-16734897375e` passed. `auth logout` completed safely against the isolated auth store.
+- Status: PASS with expected negative path and mismatches.
+- Output summary: `invite test-resolution` failed because the CLI does not provide the API-required `url` query. `join approve` on a disposable agent join request failed with `409: Join request cannot be approved because this company has no active CEO`; the request was rejected afterward.
+- Follow-up: Continue public catalog/LLM docs, adapter/environment/workspace/asset/skill/plugin/setup command domains.
+
+### 2026-05-24T12:04:55+02:00 - Public catalog and LLM docs command check
+
+- Command: `openapi`; `available-skill list`; `available-skill index`; `available-skill get cmux`; `llm agent-configuration`; `llm agent-icons`; `llm agent-configuration:adapter process`
+- Purpose: Exercise OpenAPI, public skill catalog, and LLM prompt documentation CLI surfaces.
+- Prerequisites/IDs used: isolated server on `127.0.0.1:3197`.
+- Expected result: Commands return JSON or text for registered public routes.
+- Actual result: `available-skill list` and `available-skill index` passed. `openapi` returned `API error 404: API route not found`. `available-skill get cmux` returned `API error 404: Skill not found` even though `cmux` was returned by `available-skill list`. `llm agent-configuration`, `llm agent-icons`, and `llm agent-configuration:adapter process` returned `API error 404: API route not found`.
+- Status: PARTIAL with missing route/route mismatch issues.
+- Output summary: These look like CLI/API parity gaps rather than test data problems; no code fix was applied yet.
+- Follow-up: Record mismatches and continue remaining command domains.
+
 ## Bugs And Mismatches
 
 ### BUG-001 - `context set` erased existing profile fields
@@ -403,3 +425,42 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Fix summary: Not fixed yet; adapted E2E to use `{"path":"<absolute scratch path>","adapterConfigKey":"instructionsFilePath"}`.
 - Verification command: `pnpm paperclipai agent instructions-path:update <process-agent-id> --payload-json '{"path":"<absolute scratch path>","adapterConfigKey":"instructionsFilePath"}' --json`.
 - Remaining risk: Users of generic/process adapters may need source inspection or trial-and-error to discover the required key/path shape.
+
+### MISMATCH-005 - `invite test-resolution` omits required URL query
+
+- Status: Not fixed in this pass.
+- Severity: Low command/API parity bug.
+- Reproduction command: `pnpm paperclipai invite test-resolution <invite-token> --json`.
+- Expected result: Command either supplies a documented URL option or the API accepts token-only resolution testing.
+- Actual result: API returns `400: url query parameter is required`.
+- Suspected cause: CLI wrapper maps `invite test-resolution <token>` directly to `/api/invites/:token/test-resolution` without any `url` query option.
+- Files changed: none for this mismatch.
+- Fix summary: Not fixed yet; skipped the command after verifying the failure and revoked the disposable invite.
+- Verification command: none beyond reproduction.
+- Remaining risk: Users cannot exercise invite resolution testing from the current CLI shape.
+
+### MISMATCH-006 - `join list --status pending` is rejected; API expects `pending_approval`
+
+- Status: Not fixed in this pass.
+- Severity: Low command UX drift.
+- Reproduction command: `pnpm paperclipai join list --company-id <company-id> --status pending --request-type agent --json`.
+- Expected result: Help or docs clarify valid join statuses, or common alias `pending` is accepted.
+- Actual result: API validation rejects `pending`; valid values include `pending_approval`, `approved`, and `rejected`.
+- Suspected cause: CLI exposes a free-form status string with no enum guidance.
+- Files changed: none for this mismatch.
+- Fix summary: Not fixed yet; adapted E2E to `--status pending_approval`.
+- Verification command: `pnpm paperclipai join list --company-id <company-id> --status pending_approval --request-type agent --json`.
+- Remaining risk: Users may guess `pending` from common CLI vocabulary and hit validation errors.
+
+### MISMATCH-007 - Public docs/catalog CLI routes missing or inconsistent
+
+- Status: Not fixed in this pass.
+- Severity: Medium CLI/API parity gap.
+- Reproduction command: `pnpm paperclipai openapi --json`; `pnpm paperclipai available-skill get cmux --json`; `pnpm paperclipai llm agent-configuration --json`; `pnpm paperclipai llm agent-icons --json`; `pnpm paperclipai llm agent-configuration:adapter process --json`.
+- Expected result: Registered CLI commands map to available API routes and return the OpenAPI document, skill markdown, and LLM prompt docs.
+- Actual result: `openapi` and all tested `llm` commands returned `404: API route not found`. `available-skill list` returned `cmux`, but `available-skill get cmux` returned `404: Skill not found`.
+- Suspected cause: CLI wrappers reference routes not mounted in this server mode, or catalog list items are not backed by markdown endpoints.
+- Files changed: none for this mismatch.
+- Fix summary: Not fixed yet; requires deciding whether to add routes, hide commands, or adjust command paths.
+- Verification command: `pnpm paperclipai available-skill list --json`; `pnpm paperclipai available-skill index --json` passed as partial coverage.
+- Remaining risk: CLI advertises docs/catalog commands that fail at runtime.
