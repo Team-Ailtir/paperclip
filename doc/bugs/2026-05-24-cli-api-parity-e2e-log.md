@@ -542,6 +542,17 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: Verification artifact written to `tmp/cli-api-parity/artifacts/final-agent-tokens-by-id.json`.
 - Follow-up: Commit BUG-009 fix, then run final clean status checks.
 
+### 2026-05-24T13:20:43+02:00 - Final status sweep
+
+- Command: `health --json`; `token board list --json`; `token agent list --company-id 12e9db4b-f66c-459b-959e-d645002240fb --agent 1dd601a1-031a-4225-b005-419427fd059f --json`; `routine list --company-id ... --json`; `plugin list --json`; `openapi --json`; `git status --short --branch`; `lsof -nP -iTCP:3197 -sTCP:LISTEN`; `lsof -nP -iTCP:3199 -sTCP:LISTEN`
+- Purpose: Confirm the disposable instance is still healthy, no temporary token/plugin/routine resources remain active, the fake cloud server is stopped, and git state is clean after all fixes.
+- Prerequisites/IDs used: Same scratch env and company/agent IDs.
+- Expected result: Paperclip remains running on `127.0.0.1:3197`; fake cloud port `3199` is stopped; no active board or agent tokens from the test remain; plugin list is empty; disposable routine is archived; `openapi` remains the one documented unresolved API route gap.
+- Actual result: Health returned `status: ok`; process `11566` is listening on `127.0.0.1:3197`; no process is listening on `3199`; final board token list has 2 revoked keys and no active keys; final agent token list has 4 revoked keys and no active keys; plugin list is empty; routine list contains the archived disposable routine and no active routines; `openapi --json` still returns `404: API route not found`; git status was clean before this final log update.
+- Status: PASS with known unresolved OpenAPI gap.
+- Output summary: Final artifacts are under `tmp/cli-api-parity/artifacts/final-*`.
+- Follow-up: Final report should include restart commands and call out `openapi --json` as not fixed because the OpenAPI branch/generator has not been integrated into this repo.
+
 ## Bugs And Mismatches
 
 ### BUG-009 - `token agent list --agent <agent-id>` failed even when the agent exists
