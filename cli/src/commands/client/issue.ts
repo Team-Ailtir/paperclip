@@ -764,7 +764,7 @@ export function registerIssueCommands(program: Command): void {
 
   for (const [name, action, schema, description] of [
     ["interaction:reject", "reject", rejectIssueThreadInteractionSchema, "Reject an issue thread interaction"],
-    ["interaction:cancel", "cancel", cancelIssueThreadInteractionSchema, "Cancel an issue thread interaction"],
+    ["interaction:cancel", "cancel", cancelIssueThreadInteractionSchema, "Cancel an ask_user_questions issue thread interaction"],
   ] as const) {
     addCommonClientOptions(
       issue
