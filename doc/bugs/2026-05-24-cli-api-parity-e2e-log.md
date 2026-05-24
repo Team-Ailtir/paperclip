@@ -487,7 +487,31 @@ Full Paperclip CLI/API parity smoke pass against a disposable local source-tree 
 - Output summary: Worktree read-only/dry-run paths behaved safely. Cloud push was not attempted against a real upstream and remained blocked by scratch instance settings.
 - Follow-up: Continue with a scratch-only worktree lifecycle test. Cloud requires an experimental setting plus a configured upstream; keep it gated unless a disposable fake upstream can be wired without touching the real install.
 
+### 2026-05-24T12:55:45+02:00 - Scratch worktree lifecycle and fix verification
+
+- Command: `HOME=tmp/cli-api-parity/shell-home PAPERCLIP_WORKTREES_DIR=tmp/cli-api-parity/worktree-instances pnpm paperclipai worktree:make cli-parity-wt --home <scratch-worktree-home> --from-config <scratch-config> --server-port 3198 --db-port 54331 --seed-mode minimal`; `pkill` only for the runaway scratch install attempt; edited `cli/src/commands/worktree.ts` and `cli/src/__tests__/worktree.test.ts`; `pnpm exec vitest run cli/src/__tests__/worktree.test.ts`; `pnpm --dir cli typecheck`; `paperclipai worktree:cleanup cli-parity-wt --home <scratch-worktree-home> --force`; reran `paperclipai worktree:make ...`; `paperclipai worktree:list --json`; `paperclipai worktree env --config <scratch-worktree-config> --json`; `paperclipai worktree:merge-history --from paperclip-cli-parity-wt --to current --company CLI --dry`
+- Purpose: Exercise scratch-only worktree creation, initialization, dependency install, minimal DB seed, list/env introspection, dry-run merge history, and cleanup behavior without touching the real home or default instance.
+- Prerequisites/IDs used: Scratch `HOME` `/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/shell-home`; scratch worktree instance home `/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/worktree-instances`; source config `/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/home/instances/cli-api-parity/config.json`; worktree branch/path `paperclip-cli-parity-wt`.
+- Expected result: `worktree:make` creates `/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/shell-home/paperclip-cli-parity-wt`, installs dependencies once, writes repo-local `.paperclip/config.json` and `.paperclip/.env`, seeds a minimal isolated DB on ports `3198`/`54331`, and leaves normal `worktree:list`, `worktree env`, and `worktree:merge-history --dry` usable.
+- Actual result: The first live attempt exposed BUG-007: dependency installation recursively invoked the user pnpm shim when `HOME` was overridden. After the fix, focused worktree tests and CLI typecheck passed. `worktree:cleanup --force` removed the partial scratch branch/worktree. The rerun completed successfully: dependencies installed, minimal DB seed succeeded, repo config/env were written under the scratch worktree, instance data was written under scratch worktree home, `worktree:list` showed the new worktree with `hasPaperclipConfig: true`, `worktree env --json` printed the scratch worktree env, and `worktree:merge-history --dry` previewed zero inserts with existing company history already present. The generated worktree JWT secret is intentionally not copied here.
+- Status: PASS after BUG-007 fix.
+- Output summary: One disposable worktree remains for manual continuation at `/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/shell-home/paperclip-cli-parity-wt`; its isolated config is `/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/shell-home/paperclip-cli-parity-wt/.paperclip/config.json`.
+- Follow-up: Commit BUG-007 fix, then continue remaining non-worktree command families. Cloud still requires a configured upstream or fake upstream harness for deeper coverage.
+
 ## Bugs And Mismatches
+
+### BUG-007 - `worktree:make` can recurse through pnpm shim when `HOME` is isolated
+
+- Status: Fixed and live-verified.
+- Severity: Medium local-dev/worktree reliability bug.
+- Reproduction command: `HOME=/Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/shell-home pnpm paperclipai worktree:make cli-parity-wt --home /Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/worktree-instances --from-config /Users/aronprins/Documents/PaperclipAI/paperclip/tmp/cli-api-parity/home/instances/cli-api-parity/config.json --server-port 3198 --db-port 54331 --seed-mode minimal`.
+- Expected result: The command creates the scratch git worktree and runs one dependency install inside it.
+- Actual result: After creating the git worktree, `installDependenciesBestEffort()` executed bare `pnpm install`. With `HOME` redirected for isolation, the user's pnpm shim repeatedly spawned `pnpm add pnpm@9.15.4` under the scratch home and the command did not reach worktree initialization until the runaway process tree was stopped.
+- Suspected cause: The CLI did not reuse the pnpm executable that launched the current Paperclip command, so dependency installation was subject to PATH/shim behavior under an overridden `HOME`.
+- Files changed: `cli/src/commands/worktree.ts`, `cli/src/__tests__/worktree.test.ts`, `doc/bugs/2026-05-24-cli-api-parity-e2e-log.md`.
+- Fix summary: Added `resolvePnpmInstallInvocation()` and changed worktree dependency installation to reuse `npm_execpath` when the CLI was launched through pnpm, falling back to bare `pnpm` only when no pnpm launcher is available.
+- Verification command: `pnpm exec vitest run cli/src/__tests__/worktree.test.ts`; `pnpm --dir cli typecheck`; live isolated `worktree:cleanup --force` for the partial worktree; live isolated `worktree:make ... --seed-mode minimal`; `worktree:list --json`; `worktree env --config <scratch-worktree-config> --json`; `worktree:merge-history --from paperclip-cli-parity-wt --to current --company CLI --dry`.
+- Remaining risk: Low. If Paperclip is launched outside pnpm, dependency installation still falls back to PATH lookup as before.
 
 ### BUG-001 - `context set` erased existing profile fields
 
