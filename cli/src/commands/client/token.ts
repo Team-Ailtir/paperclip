@@ -224,7 +224,7 @@ async function resolveAgent(api: { get<T>(path: string): Promise<T | null> }, co
   }
   const query = new URLSearchParams({ companyId });
   const agent = await api.get<Agent>(`${apiPath`/api/agents/${trimmed}`}?${query.toString()}`);
-  if (!agent) throw new Error(`Agent not found: ${agentRef}`);
+  if (!agent || agent.companyId !== companyId) throw new Error(`Agent not found: ${agentRef}`);
   return agent;
 }
 

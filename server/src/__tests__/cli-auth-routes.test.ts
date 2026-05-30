@@ -356,9 +356,10 @@ describe.sequential("cli auth routes", () => {
   });
 
   it.sequential("lists and revokes named board API keys for the current board user", async () => {
+    const keyId = "55555555-5555-4555-8555-555555555555";
     mockBoardAuthService.listBoardApiKeys.mockResolvedValue([
       {
-        id: "board-key-5",
+        id: keyId,
         name: "external-admin",
         createdAt: new Date("2026-05-23T12:00:00.000Z"),
         lastUsedAt: null,
@@ -367,12 +368,12 @@ describe.sequential("cli auth routes", () => {
       },
     ]);
     mockBoardAuthService.getBoardApiKeyForUser.mockResolvedValue({
-      id: "board-key-5",
+      id: keyId,
       userId: "user-1",
       name: "external-admin",
     });
     mockBoardAuthService.revokeBoardApiKey.mockResolvedValue({
-      id: "board-key-5",
+      id: keyId,
       userId: "user-1",
       name: "external-admin",
     });
@@ -388,11 +389,15 @@ describe.sequential("cli auth routes", () => {
 
     const listRes = await request(app).get("/api/board-api-keys");
     expect(listRes.status).toBe(200);
-    expect(listRes.body[0]).toMatchObject({ id: "board-key-5", name: "external-admin" });
+    expect(listRes.body[0]).toMatchObject({ id: keyId, name: "external-admin" });
+    expect(mockBoardAuthService.listBoardApiKeys).toHaveBeenCalledWith(
+      "user-1",
+      { includeInactive: false },
+    );
 
-    const revokeRes = await request(app).delete("/api/board-api-keys/board-key-5");
+    const revokeRes = await request(app).delete(`/api/board-api-keys/${keyId}`);
     expect(revokeRes.status).toBe(200);
-    expect(revokeRes.body).toEqual({ ok: true, keyId: "board-key-5" });
+    expect(revokeRes.body).toEqual({ ok: true, keyId });
     expect(mockLogActivity).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -400,5 +405,21 @@ describe.sequential("cli auth routes", () => {
         action: "board_api_key.revoked",
       }),
     );
+  });
+
+  it.sequential("rejects malformed board API key IDs before database lookup", async () => {
+    const app = await createApp({
+      type: "board",
+      userId: "user-1",
+      source: "board_key",
+      isInstanceAdmin: false,
+      companyIds: ["company-1"],
+    });
+
+    const res = await request(app).delete("/api/board-api-keys/not-a-uuid");
+
+    expect(res.status).toBe(400);
+    expect(mockBoardAuthService.getBoardApiKeyForUser).not.toHaveBeenCalled();
+    expect(mockBoardAuthService.revokeBoardApiKey).not.toHaveBeenCalled();
   });
 });

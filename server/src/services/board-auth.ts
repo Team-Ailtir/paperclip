@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import {
   authUsers,
@@ -188,7 +188,21 @@ export function boardAuthService(db: Db) {
     };
   }
 
-  async function listBoardApiKeys(userId: string) {
+  async function listBoardApiKeys(
+    userId: string,
+    opts: { includeInactive?: boolean } = {},
+  ) {
+    const conditions = [eq(boardApiKeys.userId, userId)];
+    if (!opts.includeInactive) {
+      const activeExpirationCondition = or(
+        isNull(boardApiKeys.expiresAt),
+        gt(boardApiKeys.expiresAt, new Date()),
+      );
+      conditions.push(
+        isNull(boardApiKeys.revokedAt),
+      );
+      if (activeExpirationCondition) conditions.push(activeExpirationCondition);
+    }
     return db
       .select({
         id: boardApiKeys.id,
@@ -199,7 +213,7 @@ export function boardAuthService(db: Db) {
         expiresAt: boardApiKeys.expiresAt,
       })
       .from(boardApiKeys)
-      .where(eq(boardApiKeys.userId, userId))
+      .where(and(...conditions))
       .orderBy(sql`${boardApiKeys.createdAt} desc`);
   }
 

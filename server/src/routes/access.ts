@@ -44,7 +44,8 @@ import {
   archiveCompanyMemberSchema,
   updateMemberPermissionsSchema,
   updateUserCompanyAccessSchema,
-  PERMISSION_KEYS
+  PERMISSION_KEYS,
+  isUuidLike,
 } from "@paperclipai/shared";
 import type { DeploymentExposure, DeploymentMode, HumanCompanyMembershipRole, PermissionKey } from "@paperclipai/shared";
 import {
@@ -2643,7 +2644,9 @@ export function accessRoutes(
     if (req.actor.type !== "board" || !req.actor.userId) {
       throw unauthorized("Board authentication required");
     }
-    const keys = await boardAuth.listBoardApiKeys(req.actor.userId);
+    const keys = await boardAuth.listBoardApiKeys(req.actor.userId, {
+      includeInactive: req.query.includeInactive === "true",
+    });
     res.json(keys);
   });
 
@@ -2695,6 +2698,9 @@ export function accessRoutes(
       throw unauthorized("Board authentication required");
     }
     const keyId = (req.params.keyId as string).trim();
+    if (!isUuidLike(keyId)) {
+      throw badRequest("Invalid board API key ID");
+    }
     const key = await boardAuth.getBoardApiKeyForUser(keyId, req.actor.userId);
     if (!key) throw notFound("Board API key not found");
     const revoked = await boardAuth.revokeBoardApiKey(key.id);
