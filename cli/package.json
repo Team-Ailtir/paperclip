@@ -1,6 +1,6 @@
 {
   "name": "paperclipai",
-  "version": "0.3.1-0a396a312",
+  "version": "0.3.1-860ed9ee8",
   "description": "Paperclip CLI — orchestrate AI agent teams to run a business",
   "type": "module",
   "bin": {
