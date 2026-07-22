@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build and Install CLI"
+  short_description: "Build and install the local Paperclip CLI"
+  default_prompt: "Use $build-install-cli to build and globally install the latest Paperclip CLI from the ailtir branch."
