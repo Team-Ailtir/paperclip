@@ -47,7 +47,8 @@ diagnostics/
 .paperclip-local/
 .paperclip-runtime/
 /.idea/
-/.agents/
+/.agents/*
+!/.agents/skills/
 
 # Doc maintenance cursor
 .doc-review-cursor
