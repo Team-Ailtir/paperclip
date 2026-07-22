@@ -1,4 +1,4 @@
 interface:
   display_name: "Deploy Ailtir Image"
-  short_description: "Deploy a verified Paperclip image to Ailtir"
-  default_prompt: "Use $deploy-ailtir-image to deploy a verified Paperclip image to production."
+  short_description: "Deploy Paperclip and refresh the local CLI"
+  default_prompt: "Use $deploy-ailtir-image to deploy a verified Paperclip image to production and refresh the local CLI."
