@@ -1,12 +1,13 @@
 ---
 name: deploy-ailtir-image
-description: Deploy a verified immutable Paperclip image from Ailtir's AWS ECR repository through the sibling infrastructure repository. Use when asked to deploy, roll out, or promote a specific Paperclip image tag to paperclip.ailtir.ai; do not use to build an unpublished image.
+description: Deploy a verified immutable Paperclip image from Ailtir's AWS ECR repository through the sibling infrastructure repository, then build and install the latest local Paperclip CLI. Use when asked to deploy, roll out, or promote a specific Paperclip image tag to paperclip.ailtir.ai; do not use to build an unpublished image.
 ---
 
 # Deploy an Ailtir Image
 
 Deploy one explicit immutable Paperclip image tag through Pulumi, then verify
-the ECS task and live health endpoint. Never deploy `latest`.
+the ECS task and live health endpoint. After production verification succeeds,
+refresh the globally linked local CLI. Never deploy `latest`.
 
 ## Constants
 
@@ -130,6 +131,13 @@ is the preferred handoff.
    esac
    ```
 
+9. Return to the Paperclip repository. Read the sibling
+   `build-install-cli` skill at
+   `.agents/skills/build-install-cli/SKILL.md` in full and execute its complete
+   workflow. Require its CLI build, global link, version, help, and clean
+   worktree checks to pass. Record the installed CLI version and global link
+   target.
+
 ## Failure and Rollback
 
 Do not report success until ECR, Pulumi, ECS, and live health all agree on the
@@ -142,7 +150,14 @@ fails:
 4. Do not silently change infrastructure back. Ask for or follow explicit
    rollback authorization, then repeat this workflow using the previous tag.
 
+If step 9 fails after production verification succeeded, do not roll back the
+deployment. Report that production is healthy on the requested tag, identify
+the failed CLI build or installation gate, and leave the CLI failure available
+for a targeted retry with `build-install-cli`.
+
 ## Completion
 
 Report the infrastructure commit, image tag and digest, ECS service/task
-identity, live version, and health result.
+identity, live version, health result, installed CLI version, and global CLI
+link target. Do not report the entire workflow complete until the local CLI
+verification passes.
