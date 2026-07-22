@@ -1,10 +1,11 @@
 .DEFAULT_GOAL := help
 
-GIT_REPO := $(shell basename -s .git $(shell git config --get remote.origin.url))
-GIT_SHA  := $(shell git rev-parse --short HEAD)
+GIT_REPO  := $(shell basename -s .git $(shell git config --get remote.origin.url))
+GIT_SHA   := $(shell git rev-parse --short=9 HEAD)
+AWS_REGION ?= eu-west-1
 
 define get_aws_repo
-  $(shell aws ecr describe-repositories | jq -r '.repositories[] | select(.repositoryName | startswith("$(GIT_REPO)-")) | .repositoryUri')
+  $(shell aws ecr describe-repositories --region $(AWS_REGION) | jq -er '[.repositories[] | select(.repositoryName | startswith("$(GIT_REPO)-"))] | if length == 1 then .[0].repositoryUri else error("expected exactly one $(GIT_REPO)-* ECR repository") end')
 endef
 
 .PHONY: docker-init
@@ -21,7 +22,7 @@ version-stamp: ## Stamp package.json files with <version>-<git-sha>
 	scripts/version-stamp.sh
 
 .PHONY: docker-build
-docker-build: nothing-to-commit version-stamp ## Build the Docker image
+docker-build: ## Build the Docker image from the current stamped worktree
 	docker build -t $(GIT_REPO) .
 	docker tag $(GIT_REPO):latest $(GIT_REPO):$(GIT_SHA)
 
