@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { paperclipConfigSchema } from "@paperclipai/shared";
 
 const execFileAsync = promisify(execFile);
 
@@ -57,7 +58,7 @@ function installStubs(ids: { uid: number; gid: number; nodeUid?: number; nodeGid
 
 async function runEntrypoint(env: Record<string, string> = {}) {
   const result = await execFileAsync("sh", [ENTRYPOINT, "echo", "ENTRYPOINT-CMD-RAN"], {
-    env: { PATH: `${stubDir}:${process.env.PATH}`, ...env },
+    env: { PATH: `${stubDir}:${process.env.PATH}`, PAPERCLIP_CONFIG: join(stubDir, "config.json"), ...env },
   });
   const calls = existsSync(logFile) ? readFileSync(logFile, "utf8") : "";
   return { stdout: result.stdout, stderr: result.stderr, calls };
@@ -137,6 +138,30 @@ describe("docker-entrypoint.sh", () => {
     const { calls } = await runEntrypoint({ PAPERCLIP_HOME: stubDir });
 
     expect(calls).toContain(`chown -R node:node ${stubDir}`);
+  });
+
+  it("repairs the legacy Ailtir config at the stable config path", async () => {
+    installStubs({ uid: 0, gid: 0 });
+    const configPath = join(stubDir, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        meta: { version: 1 },
+        server: { deploymentMode: "authenticated", exposure: "public", host: "0.0.0.0", port: 3100 },
+        auth: { baseUrlMode: "explicit", publicBaseUrl: "https://paperclip.example.com" },
+        database: { mode: "postgres", connectionString: "postgres://example" },
+        storage: { provider: "local_disk" },
+        secrets: { provider: "local_encrypted" },
+      }),
+    );
+
+    await runEntrypoint({ PAPERCLIP_CONFIG: configPath });
+
+    const repaired = JSON.parse(readFileSync(configPath, "utf8"));
+    expect(repaired).not.toHaveProperty("meta");
+    expect(repaired.logging).toEqual({ mode: "file" });
+    expect(repaired.$meta).toMatchObject({ version: 1, source: "configure" });
+    expect(() => paperclipConfigSchema.parse(repaired)).not.toThrow();
   });
 
   it("execs directly and silently when already running as the requested user (restricted PodSecurity)", async () => {
