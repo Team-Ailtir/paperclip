@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build and Push Ailtir Image"
+  short_description: "Build and publish an immutable Ailtir image"
+  default_prompt: "Use $build-push-ailtir-image to build and publish the current Ailtir Paperclip image."
