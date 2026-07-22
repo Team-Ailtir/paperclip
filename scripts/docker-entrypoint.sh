@@ -35,34 +35,51 @@ if [ "$(id -g node)" -ne "$PGID" ]; then
     changed=1
 fi
 
-# Seed a minimal config so CLI commands work when running against an external DB.
-# The server ignores this file and reads env vars directly; the CLI needs it to
-# know the deployment mode and auth base URL before it can touch the DB.
-CONFIG_PATH=/paperclip/instances/default/config.json
-if [ ! -f "$CONFIG_PATH" ]; then
-    mkdir -p "$(dirname "$CONFIG_PATH")"
-    python3 -c "
-import json, os, sys
-cfg = {
-    'meta': {'version': 1},
-    'server': {
-        'deploymentMode': os.environ.get('PAPERCLIP_DEPLOYMENT_MODE', 'authenticated'),
-        'exposure': os.environ.get('PAPERCLIP_DEPLOYMENT_EXPOSURE', 'public'),
-        'host': '0.0.0.0',
-        'port': int(os.environ.get('PORT', 3100)),
-    },
-    'auth': {
-        'baseUrlMode': 'explicit',
-        'publicBaseUrl': os.environ.get('PAPERCLIP_PUBLIC_URL', 'http://localhost:3100'),
-    },
-    'database': {'mode': 'postgres', 'connectionString': os.environ.get('DATABASE_URL', '')},
-    'storage': {'provider': 'local_disk'},
-    'secrets': {'provider': 'local_encrypted'},
+# Seed the external-database config, or repair the legacy Ailtir config in place.
+# Keep one stable path because it lives on persistent storage across deployments.
+CONFIG_PATH=${PAPERCLIP_CONFIG:-/paperclip/instances/default/config.json}
+mkdir -p "$(dirname "$CONFIG_PATH")"
+python3 - "$CONFIG_PATH" <<'PY'
+from datetime import datetime, timezone
+import json
+import os
+import sys
+
+path = sys.argv[1]
+if os.path.exists(path):
+    with open(path) as config_file:
+        cfg = json.load(config_file)
+else:
+    cfg = {
+        'server': {
+            'deploymentMode': os.environ.get('PAPERCLIP_DEPLOYMENT_MODE', 'authenticated'),
+            'exposure': os.environ.get('PAPERCLIP_DEPLOYMENT_EXPOSURE', 'public'),
+            'host': '0.0.0.0',
+            'port': int(os.environ.get('PORT', 3100)),
+        },
+        'auth': {
+            'baseUrlMode': 'explicit',
+            'publicBaseUrl': os.environ.get('PAPERCLIP_PUBLIC_URL', 'http://localhost:3100'),
+        },
+        'database': {'mode': 'postgres', 'connectionString': os.environ.get('DATABASE_URL', '')},
+        'storage': {'provider': 'local_disk'},
+        'secrets': {'provider': 'local_encrypted'},
+    }
+
+cfg.pop('meta', None)
+cfg['$meta'] = {
+    'version': 1,
+    'updatedAt': datetime.now(timezone.utc).isoformat(),
+    'source': 'configure',
 }
-with open(sys.argv[1], 'w') as f:
-    json.dump(cfg, f, indent=2)
-" "$CONFIG_PATH"
-fi
+cfg.setdefault('logging', {'mode': 'file'})
+
+temporary_path = f'{path}.tmp'
+with open(temporary_path, 'w') as config_file:
+    json.dump(cfg, config_file, indent=2)
+    config_file.write('\n')
+os.replace(temporary_path, path)
+PY
 
 # Fix ownership after all root writes are done.
 chown -R node:node /paperclip
