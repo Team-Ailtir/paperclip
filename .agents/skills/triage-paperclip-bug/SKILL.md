@@ -1,6 +1,6 @@
 ---
 name: triage-paperclip-bug
-description: Reproduce and classify a Paperclip defect, search upstream issues and PRs, and select the strongest verifiable fix. Use when a Paperclip bug is observed in source or production and it is not yet clear whether it is known, fixed upstream, Ailtir-specific, infrastructure-related, or configuration-related.
+description: Reproduce and classify a Paperclip defect, search upstream issues and PRs, and select the strongest verifiable fix. Use when a source or production bug needs diagnosis.
 ---
 
 # Triage a Paperclip Bug
