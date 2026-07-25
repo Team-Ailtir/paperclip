@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sync Ailtir Upstream"
+  short_description: "Rebase the Ailtir patch queue safely"
+  default_prompt: "Use $sync-ailtir-upstream to synchronize master and rebase ailtir safely."
