@@ -89,6 +89,19 @@ describe("adapter model listing", () => {
     }));
   });
 
+  it("uses the AWS global inference profile for Bedrock Fable 5", async () => {
+    process.env.CLAUDE_CODE_USE_BEDROCK = "1";
+    process.env.AWS_REGION = "eu-west-1";
+
+    const models = await listAdapterModels("claude_local");
+
+    expect(models).toContainEqual({
+      id: "global.anthropic.claude-fable-5",
+      label: "Bedrock Fable 5",
+    });
+    expect(models.some((model) => model.id === "eu.anthropic.claude-fable-5-v1")).toBe(false);
+  });
+
   it("loads claude models dynamically and merges fallback options", async () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-test";
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
