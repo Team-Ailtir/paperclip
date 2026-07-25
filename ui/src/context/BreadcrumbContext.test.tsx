@@ -3,6 +3,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { version } from "../../package.json";
 import { BreadcrumbProvider, buildDocumentTitle, useBreadcrumbs } from "./BreadcrumbContext";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,18 +106,18 @@ describe("BreadcrumbContext", () => {
 
   it("builds page titles with the selected company name before Paperclip", () => {
     expect(buildDocumentTitle([{ label: "Inbox" }], "Anachronist Wiki")).toBe(
-      "Inbox • Anachronist Wiki • Paperclip",
+      `Inbox • Anachronist Wiki • Paperclip (${version})`,
     );
     expect(
       buildDocumentTitle(
         [{ label: "Issues", href: "/issues" }, { label: "PAP-3515" }],
         "Anachronist Wiki",
       ),
-    ).toBe("PAP-3515 • Issues • Anachronist Wiki • Paperclip");
+    ).toBe(`PAP-3515 • Issues • Anachronist Wiki • Paperclip (${version})`);
   });
 
   it("omits blank company names from page titles", () => {
-    expect(buildDocumentTitle([{ label: "Inbox" }], "  ")).toBe("Inbox • Paperclip");
-    expect(buildDocumentTitle([], null)).toBe("Paperclip");
+    expect(buildDocumentTitle([{ label: "Inbox" }], "  ")).toBe(`Inbox • Paperclip (${version})`);
+    expect(buildDocumentTitle([], null)).toBe(`Paperclip (${version})`);
   });
 });
