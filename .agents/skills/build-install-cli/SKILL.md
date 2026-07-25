@@ -1,12 +1,12 @@
 ---
 name: build-install-cli
-description: Build and globally install the Paperclip CLI from the latest Ailtir branch source, then verify the executable, version, and global link. Use when asked to build, install, reinstall, or refresh the local `paperclipai` CLI from this repository rather than installing the published npm package.
+description: Build and globally install the Paperclip CLI from the latest Ailtir branch source, then verify the executable, version, and installed source. Use when asked to build, install, reinstall, or refresh the local `paperclipai` CLI from this repository rather than installing the published npm package.
 ---
 
 # Build and Install the Paperclip CLI
 
-Build the CLI from the current `origin/ailtir` source and globally link that
-local build. Do not publish packages, create commits, or push branches.
+Build an installable CLI package from the current `origin/ailtir` source and
+install it globally. Do not publish packages, create commits, or push branches.
 
 ## Preconditions
 
@@ -36,29 +36,33 @@ local build. Do not publish packages, create commits, or push branches.
 
 ## Build and Install
 
-1. Install the locked workspace dependencies with the repository-declared
+1. Create a temporary detached worktree at `$source_commit`. Build there
+   because the npm packaging script temporarily replaces `cli/package.json`.
+2. Install the locked workspace dependencies with the repository-declared
    package manager:
 
    ```sh
    npx -y "$package_manager" install --frozen-lockfile
    ```
 
-2. Build only the CLI package:
+3. Build the publishable CLI package. A plain workspace CLI build is
+   insufficient because its esbuild output externalizes transitive npm
+   dependencies that are materialized only by the packaging step.
 
    ```sh
-   npx -y "$package_manager" --filter paperclipai build
-   test -x cli/dist/index.js
+   npx -y "$package_manager" exec bash ./scripts/build-npm.sh --skip-typecheck
    ```
 
-3. Link the built package globally from `cli/`:
+4. Pack and install the generated tarball:
 
    ```sh
-   (cd cli && npm link)
+   (cd cli && npm pack --pack-destination "$artifact_dir")
+   npm install -g "$artifact_dir"/paperclipai-*.tgz
    hash -r
    ```
 
-   `npm link` is intentional: the installed command must continue to resolve
-   to this checkout, not to the latest package published on npm.
+5. Remove the detached worktree and temporary artifacts. Confirm the main
+   worktree is still clean.
 
 ## Verification
 
@@ -73,9 +77,8 @@ test "$(git rev-parse HEAD)" = "$source_commit"
 test -z "$(git status --porcelain)"
 ```
 
-Require `npm ls -g` to show `paperclipai@$expected_version` linked to this
-repository's `cli` directory. An asdf shim path from `command -v` is valid when
-the global package listing proves the underlying link target.
+Require `npm ls -g` to show `paperclipai@$expected_version`. An asdf shim path
+from `command -v` is valid when the version and global package listing agree.
 
 ## Failure Handling
 
@@ -84,13 +87,13 @@ the global package listing proves the underlying link target.
 - Some optional native dependencies may report compilation failures and fall
   back to JavaScript. Treat them as warnings only when the package-manager
   command itself exits successfully.
-- If `npm link` succeeds but the executable is not found, run the active Node
-  manager's reshim operation, refresh the shell command cache, and retry the
-  verification. Do not install the registry package as a fallback.
+- If installation succeeds but the executable is not found, run the active
+  Node manager's reshim operation, refresh the shell command cache, and retry
+  the verification. Do not install the registry package as a fallback.
 - Do not edit manifests or lockfiles to force an installation unless the user
   explicitly asks for a packaging fix.
 
 ## Completion
 
-Report the branch, full source commit, installed CLI version, global link
-target, verification results, and whether the worktree remains clean.
+Report the branch, full source commit, installed CLI version, verification
+results, and whether the worktree remains clean.
