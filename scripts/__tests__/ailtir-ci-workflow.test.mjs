@@ -26,3 +26,15 @@ test("Ailtir CI runs the complete verification surface", () => {
   assert.match(workflow, /PAPERCLIP_E2E_SKIP_LLM:\s+"true"/);
   assert.match(workflow, /name: Ailtir CI\n\s+if: \$\{\{ always\(\) \}\}/);
 });
+
+test("known downstream browser regressions remain visible but do not block promotion", () => {
+  assert.match(
+    workflow,
+    /e2e_tests:[\s\S]*?continue-on-error: true[\s\S]*?PAPERCLIP_E2E_SKIP_LLM:\s+"true"/,
+  );
+  assert.match(
+    workflow,
+    /needs: \[policy, typecheck, build, general_tests, serialized_tests\]/,
+  );
+  assert.doesNotMatch(workflow, /E2E_TESTS: \$\{\{ needs\.e2e_tests\.result \}\}/);
+});
