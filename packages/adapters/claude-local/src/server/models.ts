@@ -14,12 +14,12 @@ function bedrockRegionPrefix(): string {
   return "us";
 }
 
-/** AWS Bedrock model IDs — region-qualified identifiers required by the Bedrock API. */
+/** AWS Bedrock model IDs — region-qualified unless AWS only offers a global profile. */
 function buildBedrockModels(): AdapterModel[] {
   const p = bedrockRegionPrefix();
   return [
     { id: `${p}.anthropic.claude-opus-4-8-v1`, label: "Bedrock Opus 4.8" },
-    { id: `${p}.anthropic.claude-fable-5-v1`, label: "Bedrock Fable 5" },
+    { id: "global.anthropic.claude-fable-5", label: "Bedrock Fable 5" },
     { id: `${p}.anthropic.claude-opus-4-6-v1`, label: "Bedrock Opus 4.6" },
     { id: `${p}.anthropic.claude-sonnet-4-5-20250929-v2:0`, label: "Bedrock Sonnet 4.5" },
     { id: `${p}.anthropic.claude-haiku-4-5-20251001-v1:0`, label: "Bedrock Haiku 4.5" },
