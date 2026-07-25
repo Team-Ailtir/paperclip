@@ -1,0 +1,4 @@
+interface:
+  display_name: "Triage Paperclip Bug"
+  short_description: "Find and validate upstream Paperclip fixes"
+  default_prompt: "Use $triage-paperclip-bug to reproduce this bug and find the best upstream fix."

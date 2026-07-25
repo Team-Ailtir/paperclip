@@ -1,13 +1,13 @@
 ---
 name: deploy-ailtir-image
-description: Deploy a verified immutable Paperclip image from Ailtir's AWS ECR repository through the sibling infrastructure repository, then build and install the latest local Paperclip CLI. Use when asked to deploy, roll out, or promote a specific Paperclip image tag to paperclip.ailtir.ai; do not use to build an unpublished image.
+description: Automatically deploy a verified immutable Paperclip image from Ailtir's AWS ECR repository through the sibling infrastructure repository, verify production, update the downstream changelog, then build and install the local CLI. Use after every successful Ailtir synchronization and image publication.
 ---
 
 # Deploy an Ailtir Image
 
 Deploy one explicit immutable Paperclip image tag through Pulumi, then verify
-the ECS task and live health endpoint. After production verification succeeds,
-refresh the globally linked local CLI. Never deploy `latest`.
+the ECS task and live health endpoint. A successful synchronized build is
+authorization to continue without another confirmation. Never deploy `latest`.
 
 ## Constants
 
@@ -28,7 +28,10 @@ is the preferred handoff.
 ## Preconditions
 
 1. Run `aws sts get-caller-identity` and require account `890742582948`.
-2. Resolve exactly one ECR repository whose name starts with `paperclip-`.
+2. Read the live health payload before changing infrastructure. Require
+   `databaseBackup.enabled` and `databaseBackup.status == "ok"`. Record the
+   current image tag as the fix-forward reference.
+3. Resolve exactly one ECR repository whose name starts with `paperclip-`.
    Stop when none or more than one match; do not guess. Query that repository
    for the requested tag and record its digest. Stop if it does not exist.
 
@@ -44,11 +47,11 @@ is the preferred handoff.
    test -n "$image_digest"
    test "$image_digest" != "None"
    ```
-3. Resolve the infrastructure repository. Prefer `$AILTIR_INFRA_REPO` when set;
+4. Resolve the infrastructure repository. Prefer `$AILTIR_INFRA_REPO` when set;
    otherwise use the `../infrastructure` sibling of the Paperclip repository.
    Resolve `skill_dir` as the directory containing this `SKILL.md`.
-4. Require the infrastructure worktree to be clean and on `main`.
-5. Run `git pull --ff-only origin main`, then require local HEAD to equal
+5. Require the infrastructure worktree to be clean and on `main`.
+6. Run `git pull --ff-only origin main`, then require local HEAD to equal
    `origin/main`. Stop on local-only commits or divergence.
 
 ## Deployment Workflow
@@ -138,22 +141,27 @@ is the preferred handoff.
    worktree checks to pass. Record the installed CLI version and global link
    target.
 
-## Failure and Rollback
+## Failure and Fix Forward
 
-Do not report success until ECR, Pulumi, ECS, and live health all agree on the
-requested tag. If apply, stabilization, task inspection, or health verification
-fails:
+Do not report success until ECR, Pulumi, ECS, live health, the relevant
+regression, and the local CLI agree. If any gate fails:
 
 1. Report the exact failed gate.
-2. Report both the requested tag and recorded previous tag.
-3. Preserve command output needed for diagnosis.
-4. Do not silently change infrastructure back. Ask for or follow explicit
-   rollback authorization, then repeat this workflow using the previous tag.
+2. Preserve both the requested and previous tags plus diagnostic output.
+3. Classify and fix the source, integration, build, migration, infrastructure,
+   configuration, or runtime cause.
+4. Rebuild when source changed and repeat from the earliest invalidated gate.
+5. Continue until production succeeds. Do not roll back automatically. Ask for
+   help only when progress needs user judgment, credentials, or broader scope.
 
 If step 9 fails after production verification succeeded, do not roll back the
 deployment. Report that production is healthy on the requested tag, identify
 the failed CLI build or installation gate, and leave the CLI failure available
 for a targeted retry with `build-install-cli`.
+
+After every successful deployment, execute `update-ailtir-changelog` with the
+source SHA, image tag/digest, infrastructure commit, live version, and
+verification result. Commit and push that record to `ailtir`.
 
 ## Completion
 
