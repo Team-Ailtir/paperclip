@@ -1,0 +1,255 @@
+name: Ailtir CI
+
+on:
+  push:
+    branches:
+      - ailtir
+      - "ailtir-candidate/**"
+  pull_request:
+    branches:
+      - ailtir
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ailtir-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: Policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Validate repository and downstream CI policy
+        run: |
+          node ./scripts/check-docker-deps-stage.mjs
+          node ./scripts/check-no-git-push.mjs
+          node --test \
+            ./scripts/check-no-git-push.test.mjs \
+            ./scripts/__tests__/ailtir-ci-workflow.test.mjs \
+            ./scripts/__tests__/run-vitest-stable-shard.test.mjs \
+            ./scripts/__tests__/e2e-shard.test.mjs
+
+  typecheck:
+    name: Typecheck
+    needs: [policy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  build:
+    name: Build
+    needs: [policy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  general_tests:
+    name: General tests (${{ matrix.label }})
+    needs: [policy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: general-server
+            label: server 1/3
+            shard_index: 0
+            shard_count: 3
+          - group: general-server
+            label: server 2/3
+            shard_index: 1
+            shard_count: 3
+          - group: general-server
+            label: server 3/3
+            shard_index: 2
+            shard_count: 3
+          - group: general-workspaces-a
+            label: workspaces A
+          - group: general-workspaces-b
+            label: workspaces B
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run grouped general test suites
+        run: |
+          if [ -n "${{ matrix.shard_count }}" ]; then
+            pnpm test:run:general -- --group '${{ matrix.group }}' \
+              --shard-index ${{ matrix.shard_index }} \
+              --shard-count ${{ matrix.shard_count }}
+          else
+            pnpm test:run:general -- --group '${{ matrix.group }}'
+          fi
+
+  serialized_tests:
+    name: Serialized server tests (${{ matrix.label }})
+    needs: [policy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard_index: 0
+            shard_count: 4
+            label: 1/4
+          - shard_index: 1
+            shard_count: 4
+            label: 2/4
+          - shard_index: 2
+            shard_count: 4
+            label: 3/4
+          - shard_index: 3
+            shard_count: 4
+            label: 4/4
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - name: Run serialized server test shard
+        run: |
+          pnpm test:run:serialized -- \
+            --shard-index ${{ matrix.shard_index }} \
+            --shard-count ${{ matrix.shard_count }}
+
+  e2e_tests:
+    name: Non-LLM E2E tests (${{ matrix.label }})
+    needs: [policy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard_index: 0
+            shard_count: 2
+            label: 1/2
+          - shard_index: 1
+            shard_count: 2
+            label: 2/2
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: google-chrome --version
+
+      - name: Generate isolated test configuration
+        run: |
+          mkdir -p ~/.paperclip/instances/default
+          cat > ~/.paperclip/instances/default/config.json << 'CONF'
+          {
+            "$meta": { "version": 1, "updatedAt": "2026-01-01T00:00:00.000Z", "source": "ailtir-ci" },
+            "database": { "mode": "embedded-postgres" },
+            "logging": { "mode": "file" },
+            "server": { "deploymentMode": "local_trusted", "host": "127.0.0.1", "port": 3100 },
+            "auth": { "baseUrlMode": "auto" },
+            "storage": { "provider": "local_disk" },
+            "secrets": { "provider": "local_encrypted", "strictMode": false }
+          }
+          CONF
+
+      - name: Run duration-balanced E2E shard
+        env:
+          PAPERCLIP_E2E_SKIP_LLM: "true"
+          PAPERCLIP_PLAYWRIGHT_CHANNEL: "chrome"
+        run: |
+          specs="$(node ./scripts/e2e-shard.mjs \
+            --shard-index ${{ matrix.shard_index }} \
+            --shard-count ${{ matrix.shard_count }})"
+          pnpm run test:e2e -- $specs
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ailtir-playwright-report-${{ matrix.shard_index }}
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          retention-days: 14
+
+  ailtir_ci:
+    name: Ailtir CI
+    if: ${{ always() }}
+    needs: [policy, typecheck, build, general_tests, serialized_tests, e2e_tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every CI lane
+        env:
+          POLICY: ${{ needs.policy.result }}
+          TYPECHECK: ${{ needs.typecheck.result }}
+          BUILD: ${{ needs.build.result }}
+          GENERAL_TESTS: ${{ needs.general_tests.result }}
+          SERIALIZED_TESTS: ${{ needs.serialized_tests.result }}
+          E2E_TESTS: ${{ needs.e2e_tests.result }}
+        run: |
+          test "$POLICY" = success
+          test "$TYPECHECK" = success
+          test "$BUILD" = success
+          test "$GENERAL_TESTS" = success
+          test "$SERIALIZED_TESTS" = success
+          test "$E2E_TESTS" = success

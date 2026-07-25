@@ -28,11 +28,15 @@ deployment after every gate passes; it does not create a schedule.
    event. Commit and push it before building.
 3. Install locked dependencies with the declared package manager.
 4. Run `pnpm typecheck`, `pnpm test:run`, and `pnpm build`.
-5. Execute `build-push-ailtir-image`; its clean source SHA is the image tag.
-6. Execute `deploy-ailtir-image` automatically.
-7. Verify production health, version, database backup status, the synchronized
+5. Push the exact source commit to an `ailtir-candidate/<timestamp>` branch,
+   require the read-only `Ailtir CI` aggregate check to pass, promote that
+   commit to `origin/ailtir`, and delete the candidate branch.
+6. Execute `build-push-ailtir-image` locally; its clean source SHA is the image
+   tag. GitHub Actions must not publish the image.
+7. Execute `deploy-ailtir-image` locally and automatically.
+8. Verify production health, version, database backup status, the synchronized
    bug regression when applicable, and the locally linked CLI.
-8. Update the changelog with the image digest, infrastructure commit, live
+9. Update the changelog with the image digest, infrastructure commit, live
    version, and verification. Commit and push the post-deployment record.
 
 ## Failure policy
