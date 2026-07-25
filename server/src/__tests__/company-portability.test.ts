@@ -103,6 +103,10 @@ const goalSvc = {
   create: vi.fn(),
 };
 
+const approvalSvc = {
+  create: vi.fn(),
+};
+
 vi.mock("../services/companies.js", () => ({
   companyService: () => companySvc,
 }));
@@ -159,6 +163,10 @@ vi.mock("../services/goals.js", () => ({
   goalService: () => goalSvc,
 }));
 
+vi.mock("../services/approvals.js", () => ({
+  approvalService: () => approvalSvc,
+}));
+
 vi.mock("../routes/org-chart-svg.js", () => ({
   renderOrgChartPng: vi.fn(async () => Buffer.from("png")),
 }));
@@ -192,6 +200,7 @@ describe("company portability", () => {
       level: "company",
       status: "active",
     });
+    approvalSvc.create.mockResolvedValue({ id: "approval-created" });
     issueSvc.listComments.mockResolvedValue([]);
     issueSvc.addComment.mockResolvedValue({
       id: "comment-imported",
@@ -5286,6 +5295,83 @@ describe("company portability", () => {
     }));
     expect(companySvc.create).toHaveBeenCalledWith(expect.objectContaining({
       requireBoardApprovalForNewAgents: false,
+    }));
+  });
+
+  it("creates imported agents pending approval when the company requires it", async () => {
+    companySvc.getById.mockReset().mockResolvedValue({
+      id: "company-gated",
+      name: "Gated Company",
+      requireBoardApprovalForNewAgents: true,
+    });
+    agentSvc.list.mockResolvedValue([]);
+    agentSvc.create.mockImplementation(async (_companyId: string, input: Record<string, unknown>) => ({
+      id: "agent-gated",
+      name: input.name,
+      role: input.role,
+      title: input.title,
+      icon: input.icon,
+      reportsTo: input.reportsTo,
+      capabilities: input.capabilities,
+      adapterType: input.adapterType,
+      adapterConfig: input.adapterConfig,
+      runtimeConfig: input.runtimeConfig,
+      permissions: input.permissions,
+      budgetMonthlyCents: input.budgetMonthlyCents,
+      metadata: input.metadata,
+      status: input.status,
+    }));
+    const portability = companyPortabilityService({} as any);
+
+    await portability.importBundle({
+      source: {
+        type: "inline",
+        files: {
+          "COMPANY.md": [
+            "---",
+            'name: "Gated Company"',
+            "includes:",
+            '  - "agents/engineer/AGENTS.md"',
+            "---",
+            "",
+          ].join("\n"),
+          "agents/engineer/AGENTS.md": [
+            "---",
+            'name: "Engineer"',
+            'slug: "engineer"',
+            'role: "engineer"',
+            "---",
+            "",
+          ].join("\n"),
+        },
+      },
+      include: {
+        company: false,
+        agents: true,
+        projects: false,
+        issues: false,
+        skills: false,
+      },
+      target: {
+        mode: "existing_company",
+        companyId: "company-gated",
+      },
+      agents: "all",
+      collisionStrategy: "rename",
+    }, "user-1");
+
+    expect(agentSvc.create).toHaveBeenCalledWith("company-gated", expect.objectContaining({
+      status: "pending_approval",
+    }));
+    expect(approvalSvc.create).toHaveBeenCalledTimes(1);
+    expect(approvalSvc.create).toHaveBeenCalledWith("company-gated", expect.objectContaining({
+      type: "hire_agent",
+      requestedByUserId: "user-1",
+      status: "pending",
+      payload: expect.objectContaining({
+        agentId: "agent-gated",
+        name: "Engineer",
+      }),
     }));
   });
 

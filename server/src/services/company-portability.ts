@@ -77,6 +77,7 @@ import type { StorageService } from "../storage/types.js";
 import { accessService } from "./access.js";
 import { agentService } from "./agents.js";
 import { agentInstructionsService } from "./agent-instructions.js";
+import { approvalService } from "./approvals.js";
 import { assetService } from "./assets.js";
 import { generateReadme } from "./company-export-readme.js";
 import { renderOrgChartPng, type OrgNode } from "../routes/org-chart-svg.js";
@@ -3448,6 +3449,7 @@ export function parseGitHubSourceUrl(rawUrl: string) {
 export function companyPortabilityService(db: Db, storage?: StorageService) {
   const companies = companyService(db);
   const goals = goalService(db);
+  const approvals = approvalService(db);
   const agents = agentService(db);
   const assetRecords = assetService(db);
   const instructions = agentInstructionsService();
@@ -5488,10 +5490,12 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
             continue;
           }
 
+          const requiresApproval = Boolean(targetCompany.requireBoardApprovalForNewAgents);
+          const createdStatus = requiresApproval ? "pending_approval" : pauseAutomations ? "paused" : "idle";
           let created = await agents.create(targetCompany.id, {
             ...patch,
             ...automationPausePatch,
-            status: pauseAutomations ? "paused" : "idle",
+            status: createdStatus,
           });
           await access.ensureMembership(targetCompany.id, "agent", created.id, "member", "active");
           await access.setPrincipalPermission(
@@ -5517,7 +5521,34 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
             manifestAgent.permissionGrants ?? [],
             actorUserId ?? null,
           );
-          agentStatusById.set(created.id, created.status ?? (pauseAutomations ? "paused" : "idle"));
+          if (requiresApproval) {
+            await approvals.create(targetCompany.id, {
+              type: "hire_agent",
+              requestedByAgentId: null,
+              requestedByUserId: actorUserId ?? null,
+              status: "pending",
+              payload: {
+                name: created.name,
+                role: created.role,
+                title: created.title,
+                icon: created.icon,
+                reportsTo: created.reportsTo,
+                capabilities: created.capabilities,
+                adapterType: created.adapterType,
+                adapterConfig: created.adapterConfig,
+                runtimeConfig: created.runtimeConfig,
+                permissions: created.permissions,
+                budgetMonthlyCents: created.budgetMonthlyCents,
+                metadata: created.metadata,
+                agentId: created.id,
+              },
+              decisionNote: null,
+              decidedByUserId: null,
+              decidedAt: null,
+              updatedAt: new Date(),
+            });
+          }
+          agentStatusById.set(created.id, created.status ?? createdStatus);
           await secrets.syncEnvBindingsForTarget?.(
             targetCompany.id,
             { targetType: "agent", targetId: created.id },
