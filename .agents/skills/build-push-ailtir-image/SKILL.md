@@ -1,115 +1,47 @@
 ---
 name: build-push-ailtir-image
-description: Stamp, build, and publish a Paperclip Docker image to Ailtir's AWS ECR repository, then commit and push the recorded package versions. Use when asked to build, publish, or push a new Ailtir Paperclip image, but not when asked to deploy an already-published image.
+description: Build and publish an immutable Paperclip image from a clean Ailtir source commit while stamping package versions only inside an isolated build worktree. Use when publishing a synchronized Ailtir build; do not deploy the image or commit generated package versions.
 ---
 
 # Build and Push an Ailtir Image
 
-Stamp one clean, pushed `ailtir` source commit, build and publish that immutable
-SHA tag, then commit the stamp. Do not deploy it from this skill.
-
-The order is mandatory:
-
-```text
-version-stamp → docker-build → docker-push → git commit/push
-```
-
-Do not create a commit between `docker-build` and `docker-push`. Both Make
-invocations must resolve the same source commit SHA.
-
-## Constants
-
-- AWS account: `890742582948`
-- AWS region: `eu-west-1`
-- Source branch: `ailtir`
+Publish one clean, pushed `ailtir` source commit. Package-version stamping is a
+build artifact and must never create a commit on the downstream patch queue.
 
 ## Preconditions
 
-1. Resolve the repository root with `git rev-parse --show-toplevel` and work
-   from it.
-2. Require `git branch --show-current` to return `ailtir`.
-3. Require `git status --porcelain` to be empty. Never include unrelated
-   changes in an image or stamp commit.
-4. Fetch `origin ailtir` and require local HEAD to equal `origin/ailtir`.
-5. Run `aws sts get-caller-identity` and require account `890742582948`.
-   Stop on an unexpected account.
-6. Record the source tag before changing the worktree:
-
-   ```sh
-   build_sha=$(git rev-parse --short=9 HEAD)
-   source_commit=$(git rev-parse HEAD)
-   ```
-
-## Publish Workflow
-
-1. Stamp the tracked server, CLI, and UI manifests:
-
-   ```sh
-   make version-stamp
-   ```
-
-2. Require the only changed files to be `server/package.json`,
-   `cli/package.json`, and `ui/package.json`. Require all three versions to
-   equal the expected source version:
-
-   ```sh
-   base_version=$(node -p "require('./server/package.json').version.replace(/-[0-9a-f]+$/i, '')")
-   expected_version="${base_version}-${build_sha}"
-   test "$(node -p "require('./server/package.json').version")" = "$expected_version"
-   test "$(node -p "require('./cli/package.json').version")" = "$expected_version"
-   test "$(node -p "require('./ui/package.json').version")" = "$expected_version"
-   ```
-
-3. Build the stamped worktree. `make docker-build` deliberately accepts these
-   three generated modifications and tags the image with `$build_sha`:
-
-   ```sh
-   make docker-build
-   ```
-
-4. Verify the local immutable and `latest` tags exist and the built image
-   contains the expected version:
-
-   ```sh
-   docker image inspect "paperclip:latest" "paperclip:$build_sha" >/dev/null
-   image_version=$(docker run --rm --entrypoint node paperclip:latest \
-     -p "require('/app/server/package.json').version")
-   test "$image_version" = "$expected_version"
-   ```
-
-5. Authenticate after the successful build, then push through the Makefile.
-   The Makefile owns ECR repository resolution and pushes both the immutable
-   source tag and `latest`:
-
-   ```sh
-   ailtir-admin docker login
-   AWS_REGION=eu-west-1 make docker-push
-   ```
-
-6. Confirm HEAD still equals `$source_commit`. Then commit exactly the three
-   stamped manifests and push the stamp commit:
-
-   ```sh
-   test "$(git rev-parse HEAD)" = "$source_commit"
-   git add server/package.json cli/package.json ui/package.json
-   git diff --cached --name-only
-   git commit -m "Stamp package versions for Ailtir image $build_sha"
-   git push origin ailtir
-   ```
-
-7. Require the worktree to be clean and local `ailtir` to equal
+1. Require the main checkout to be clean, on `ailtir`, and equal to
    `origin/ailtir`.
+2. Require the root `CHANGELOG.md` current state to identify this maintenance
+   cycle.
+3. Run `aws sts get-caller-identity`; require account `890742582948`.
+4. Record the full source commit and its nine-character image tag.
 
-## Failure Handling
+## Publish
 
-- Before `docker-push`, stop without committing and report the failed gate.
-- After `docker-push`, preserve the published immutable tag. If the stamp
-  commit or push fails, report that the image exists but its recording commit
-  is incomplete; retry only the commit/push portion without rebuilding.
-- Never deploy or delete an image from this skill.
+Run `scripts/build-and-push.sh` from this skill directory. It must:
+
+1. create a detached temporary worktree at the source commit;
+2. run `make version-stamp` only there;
+3. verify exactly the server, CLI, and UI manifests changed;
+4. build and tag the Docker image with the clean source SHA;
+5. verify the embedded package version contains that SHA;
+6. authenticate through `ailtir-admin docker login`;
+7. push the immutable tag and `latest` through the Makefile;
+8. query and return the immutable ECR digest;
+9. remove the temporary worktree and leave the main checkout unchanged.
+
+Never commit the stamped manifests. Never deploy `latest`.
+
+## Failure handling
+
+Before push, stop and preserve build diagnostics. After push, preserve the
+immutable tag and digest. A retry may reuse the same tag only when its ECR
+digest matches the locally verified image; otherwise stop rather than
+overwriting an immutable identity.
 
 ## Completion
 
-Report the source commit, immutable image tag, visible package version, stamp
-commit, and push result. Hand the immutable source tag to
-`deploy-ailtir-image`.
+Report source commit, image tag, digest, embedded version, and confirmation
+that the main `ailtir` worktree remains clean and unchanged. Hand the immutable
+tag to `deploy-ailtir-image`.

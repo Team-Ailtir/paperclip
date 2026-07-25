@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Ailtir Changelog"
+  short_description: "Record Ailtir patches, builds, and deployments"
+  default_prompt: "Use $update-ailtir-changelog to record the current Ailtir source and deployment state."
