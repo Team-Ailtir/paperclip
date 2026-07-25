@@ -7,12 +7,12 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 ## Current State
 
 - Upstream base: `cca2806e57c272ed919b1cde224d3d2a23d2f668`
-- Ailtir source: `0ef3cd83dad73d681c7aa3f046d41da4e98b1669`
-- Image tag: `0ef3cd83d`
-- Image digest: `sha256:b42232768efb99ccae0ab498ec40044b38e81f5623ddf38d4f7cf5546a5aa33d`
-- Infrastructure commit: `94376648e857510d81e37765e058f2040942d336`
-- Live version: `0.3.1-0ef3cd83d`
-- Verification: full tests, build, typecheck, ECR, Pulumi, ECS, live health, database backup, and CLI passed
+- Ailtir source: `0d46440f62c2cb047a3999c3affac506a0ad9d96`
+- Image tag: `0d46440f6`
+- Image digest: `sha256:b413e66cf570a7e0a6e50b467933d4042c8a73dd2041f80ef7b7a904a723b6dc`
+- Infrastructure commit: `e79b8c4`
+- Live version: `0.3.1-0d46440f6`
+- Verification: Candidate CI passed; import created ASDL with 8 agents, 9 projects, 3 goals, and approvals; AIL-1 label-poll Claude/Bedrock smoke succeeded; all ASDL heartbeats disabled; forced ECS replacement preserved company state.
 
 ## Active Downstream Patches
 
@@ -25,14 +25,20 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 | Local CLI workflow | Ailtir | `72812795f` | downstream-only | 2026-07-25 |
 | Downstream maintenance workflow | Ailtir | `b21cf6bce` | downstream-only | 2026-07-25 |
 | Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `fd633c40d` | proposed upstream | 2026-07-25 |
-| Candidate-branch CI gate | Ailtir | `6fe067e9a` | downstream-only | not deployed |
-| Preserve imported company goals | [upstream PR #10245](https://github.com/paperclipai/paperclip/pull/10245) | `1a17b5f4e` | proposed upstream | not deployed |
-| Honor imported-agent approval policy | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `8b014c73d` | proposed upstream | not deployed |
-| Resolve Claude Bedrock defaults | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `41421f48f` | proposed upstream | not deployed |
-| Atomic new-company imports | [upstream PR #10248](https://github.com/paperclipai/paperclip/pull/10248) | `028ccbdff` | proposed upstream | not deployed |
+| Candidate-branch CI gate | Ailtir | `6fe067e9a` | downstream-only | 2026-07-25 |
+| Preserve imported company goals | [upstream PR #10245](https://github.com/paperclipai/paperclip/pull/10245) | `1a17b5f4e` | proposed upstream | 2026-07-25 |
+| Honor imported-agent approval policy | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `8b014c73d` | proposed upstream | 2026-07-25 |
+| Finalize pending agents before approvals | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `0d46440f6` | proposed upstream | 2026-07-25 |
+| Resolve Claude Bedrock defaults | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `41421f48f` | proposed upstream | 2026-07-25 |
+| Resolve Bedrock defaults before hire approval | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `77f0343e1` | proposed upstream | 2026-07-25 |
+| Atomic new-company imports | [upstream PR #10248](https://github.com/paperclipai/paperclip/pull/10248) | `028ccbdff` | proposed upstream | 2026-07-25 |
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-07-25 15:07 UTC
+
+Validated ASDL import, approval, label-queue Claude/Bedrock execution, disabled heartbeat state, and persistence after forced ECS replacement.
 
 ### 2026-07-25 12:28 UTC
 
