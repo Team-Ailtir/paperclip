@@ -57,7 +57,7 @@ import {
   writePaperclipSkillSyncPreference,
 } from "@paperclipai/adapter-utils/server-utils";
 import { requireOpenCodeModelId } from "@paperclipai/adapter-opencode-local/server";
-import { findServerAdapter } from "../adapters/index.js";
+import { findServerAdapter, listAdapterModels } from "../adapters/index.js";
 import { forbidden, notFound, unprocessable } from "../errors.js";
 import { ghFetch, gitHubApiBase, resolveRawGitHubUrl } from "./github-fetch.js";
 import type { StorageService } from "../storage/types.js";
@@ -642,6 +642,9 @@ type ImportMode = "board_full" | "agent_safe";
 type ImportBehaviorOptions = {
   mode?: ImportMode;
   sourceCompanyId?: string | null;
+  atomicContext?: {
+    compensations: Array<() => Promise<void>>;
+  };
 };
 
 type AgentLike = {
@@ -4105,6 +4108,21 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
           warnings.push(`Agent ${agent.slug} references skill ${skillRef}, but that skill is not present in the package.`);
         }
       }
+      const model =
+        isPlainRecord(agent.adapterConfig) && typeof agent.adapterConfig.model === "string"
+          ? agent.adapterConfig.model.trim()
+          : "";
+      if (model) {
+        const availableModels = await listAdapterModels(agent.adapterType);
+        if (
+          availableModels.length > 0
+          && !availableModels.some((candidate) => candidate.id === model)
+        ) {
+          errors.push(
+            `Agent ${agent.slug} model "${model}" is not available for adapter ${agent.adapterType}.`,
+          );
+        }
+      }
     }
 
     if (include.projects) {
@@ -4432,6 +4450,30 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
     actorUserId: string | null | undefined,
     options?: ImportBehaviorOptions,
   ): Promise<CompanyPortabilityImportResult> {
+    if (
+      input.target.mode === "new_company"
+      && !options?.atomicContext
+      && typeof (db as { transaction?: unknown }).transaction === "function"
+    ) {
+      const atomicContext = {
+        compensations: [] as Array<() => Promise<void>>,
+      };
+      try {
+        return await db.transaction(async (tx) =>
+          companyPortabilityService(tx as unknown as Db, storage).importBundle(
+            input,
+            actorUserId,
+            { ...options, atomicContext },
+          )
+        );
+      } catch (error) {
+        for (const compensate of atomicContext.compensations.reverse()) {
+          await compensate().catch(() => undefined);
+        }
+        throw error;
+      }
+    }
+
     const mode = resolveImportMode(options);
     const plan = await buildPreview(input, options);
     if (plan.preview.errors.length > 0) {
@@ -4498,6 +4540,14 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
           ? (sourceManifest.company?.feedbackDataSharingTermsVersion ?? null)
           : null,
       });
+      if (options?.atomicContext) {
+        const provisionedAgents = await agents.list(created.id, { includeTerminated: true });
+        for (const provisionedAgent of provisionedAgents) {
+          options.atomicContext.compensations.push(
+            () => instructions.removeManagedBundle(provisionedAgent),
+          );
+        }
+      }
       if (mode === "agent_safe" && options?.sourceCompanyId) {
         await access.copyActiveUserMemberships(options.sourceCompanyId, created.id);
       } else {
@@ -4593,6 +4643,9 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
                   contentType,
                   body,
                 });
+                options?.atomicContext?.compensations.push(
+                  () => storage.deleteObject(targetCompany!.id, stored.objectKey),
+                );
                 const createdAsset = await assetRecords.create(targetCompany.id, {
                   provider: stored.provider,
                   objectKey: stored.objectKey,
@@ -4608,6 +4661,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
                 });
                 targetCompany = updated ?? targetCompany;
               } catch (err) {
+                if (options?.atomicContext) throw err;
                 warnings.push(`Failed to import company logo ${logoPath}: ${err instanceof Error ? err.message : String(err)}`);
               }
             }
@@ -4777,6 +4831,9 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
             ...patch,
             status: createdStatus,
           });
+          options?.atomicContext?.compensations.push(
+            () => instructions.removeManagedBundle(created),
+          );
           await access.ensureMembership(targetCompany.id, "agent", created.id, "member", "active");
           await access.setPrincipalPermission(
             targetCompany.id,
@@ -4793,6 +4850,7 @@ export function companyPortabilityService(db: Db, storage?: StorageService) {
             });
             created = await agents.update(created.id, { adapterConfig: materialized.adapterConfig }) ?? created;
           } catch (err) {
+            if (options?.atomicContext) throw err;
             warnings.push(`Failed to materialize instructions bundle for ${manifestAgent.slug}: ${err instanceof Error ? err.message : String(err)}`);
           }
           await applyImportedAgentPermissionGrants(
