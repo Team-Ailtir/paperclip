@@ -25,6 +25,7 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 | Local CLI workflow | Ailtir | `72812795f` | downstream-only | 2026-07-25 |
 | Downstream maintenance workflow | Ailtir | `b21cf6bce` | downstream-only | 2026-07-25 |
 | Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `fd633c40d` | proposed upstream | 2026-07-25 |
+| Candidate-branch CI gate | Ailtir | `6fe067e9a` | downstream-only | not deployed |
 <!-- AILTIR-CURRENT:END -->
 
 ## History
