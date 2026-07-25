@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate Paperclip PR"
+  short_description: "Apply an upstream fix to Ailtir safely"
+  default_prompt: "Use $integrate-paperclip-pr to validate and incorporate this upstream PR into ailtir."

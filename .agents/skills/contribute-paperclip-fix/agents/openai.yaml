@@ -1,0 +1,4 @@
+interface:
+  display_name: "Contribute Paperclip Fix"
+  short_description: "File and ship an upstream Paperclip fix"
+  default_prompt: "Use $contribute-paperclip-fix to report this bug and prepare an upstream fix PR."

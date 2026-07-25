@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Ailtir"
+  short_description: "Synchronize, verify, build, and deploy Ailtir"
+  default_prompt: "Use $maintain-ailtir to synchronize and deploy the Ailtir Paperclip fork."
