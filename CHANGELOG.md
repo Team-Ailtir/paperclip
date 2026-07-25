@@ -7,12 +7,12 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 ## Current State
 
 - Upstream base: `cca2806e57c272ed919b1cde224d3d2a23d2f668`
-- Ailtir source: `pending normalized tip`
-- Image tag: `c95d8daa4`
-- Image digest: `unknown`
-- Infrastructure commit: `00d246e`
-- Live version: `0.3.1-c95d8daa4`
-- Verification: normalized patch queue awaiting full verification and deployment
+- Ailtir source: `0ef3cd83dad73d681c7aa3f046d41da4e98b1669`
+- Image tag: `0ef3cd83d`
+- Image digest: `sha256:b42232768efb99ccae0ab498ec40044b38e81f5623ddf38d4f7cf5546a5aa33d`
+- Infrastructure commit: `94376648e857510d81e37765e058f2040942d336`
+- Live version: `0.3.1-0ef3cd83d`
+- Verification: full tests, build, typecheck, ECR, Pulumi, ECS, live health, database backup, and CLI passed
 
 ## Active Downstream Patches
 
@@ -22,12 +22,16 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 | CLI parity consolidation | Ailtir | `7f74580f9` | downstream-only | before 2026-07-22 |
 | Ailtir image workflows | Ailtir | `8ea4c6548` | downstream-only | 2026-07-22 |
 | Persisted deployment config | Ailtir | `28890bdd0` | downstream-only | 2026-07-22 |
-| Local CLI workflow | Ailtir | `72812795f` | downstream-only | not deployed |
-| Downstream maintenance workflow | Ailtir | `b21cf6bce` | downstream-only | not deployed |
-| Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `fd633c40d` | proposed upstream | not deployed |
+| Local CLI workflow | Ailtir | `72812795f` | downstream-only | 2026-07-25 |
+| Downstream maintenance workflow | Ailtir | `b21cf6bce` | downstream-only | 2026-07-25 |
+| Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `fd633c40d` | proposed upstream | 2026-07-25 |
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-07-25 07:14 UTC
+
+Deployed normalized Ailtir source `0ef3cd83d` through infrastructure `94376648e`; verified ECS, live health, healthy database backups, and local CLI.
 
 ### 2026-07-25
 

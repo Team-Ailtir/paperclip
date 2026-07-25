@@ -27,11 +27,13 @@ def main() -> int:
 
     path = args.file
     content = path.read_text() if path.exists() else "# Ailtir Paperclip Changelog\n\n"
-    patches = (
-        args.patches_file.read_text().strip()
-        if args.patches_file
-        else "| Patch | Source | Status |\n| --- | --- | --- |\n| None | Ailtir | clean upstream |"
-    )
+    if args.patches_file:
+        patches = args.patches_file.read_text().strip()
+    elif START in content and END in content:
+        current_block = content.split(START, 1)[1].split(END, 1)[0]
+        patches = current_block.split("## Active Downstream Patches", 1)[1].strip()
+    else:
+        patches = "| Patch | Source | Status |\n| --- | --- | --- |\n| None | Ailtir | clean upstream |"
     block = "\n".join(
         [
             START,
