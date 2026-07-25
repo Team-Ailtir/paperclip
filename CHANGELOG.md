@@ -26,9 +26,17 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 | Downstream maintenance workflow | Ailtir | `b21cf6bce` | downstream-only | 2026-07-25 |
 | Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `fd633c40d` | proposed upstream | 2026-07-25 |
 | Candidate-branch CI gate | Ailtir | `6fe067e9a` | downstream-only | not deployed |
+| Preserve imported company goals | [upstream PR #10245](https://github.com/paperclipai/paperclip/pull/10245) | `1a17b5f4e` | proposed upstream | not deployed |
+| Honor imported-agent approval policy | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `8b014c73d` | proposed upstream | not deployed |
+| Resolve Claude Bedrock defaults | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `41421f48f` | proposed upstream | not deployed |
+| Atomic new-company imports | [upstream PR #10248](https://github.com/paperclipai/paperclip/pull/10248) | `028ccbdff` | proposed upstream | not deployed |
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-07-25 12:28 UTC
+
+Synchronized against pinned upstream cca2806e5 (no new upstream commits), added four importer/Bedrock fixes proposed in upstream PRs #10245-#10248, and preserved recovery tag ailtir-pre-rebase-20260725T120454Z.
 
 ### 2026-07-25 07:14 UTC
 
