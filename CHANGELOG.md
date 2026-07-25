@@ -24,12 +24,15 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 | Persisted deployment config | Ailtir | `28890bdd0` | downstream-only | 2026-07-22 |
 | Local CLI workflow | Ailtir | `72812795f` | downstream-only | not deployed |
 | Downstream maintenance workflow | Ailtir | `b21cf6bce` | downstream-only | not deployed |
+| Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `fd633c40d` | proposed upstream | not deployed |
 <!-- AILTIR-CURRENT:END -->
 
 ## History
 
 ### 2026-07-25
 
+- Fixed Cursor sandbox command PATH preservation, reported it as upstream
+  issue #10238, and proposed upstream PR #10239.
 - Synchronized `master` with upstream at `cca2806e5`, rebuilt the downstream
   patch queue, and retired five package-version-only commits. Recovery tag:
   `ailtir-recovery-20260725-063535`.
