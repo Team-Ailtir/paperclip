@@ -38,8 +38,18 @@ For every conflict:
 
 Afterward, compare the old and new stacks with `git range-diff`, require
 `master` to be an ancestor, inspect `git cherry`, and run the full repository
-verification. Push `ailtir:ailtir` with `--force-with-lease` only after all
-checks pass.
+verification.
+
+Commit the verified candidate locally, then push that exact commit to
+`ailtir-candidate/YYYYMMDDTHHMMSSZ`. Require the downstream `Ailtir CI`
+workflow's aggregate check to pass for that commit. Only then push the same
+commit to `ailtir:ailtir` with `--force-with-lease`. Confirm the remote
+`ailtir` tip equals the CI-verified candidate SHA, then delete the remote
+candidate branch.
+
+GitHub Actions is a verification gate only. Build, image publication,
+infrastructure mutation, deployment, and CLI installation remain local
+workflows and must never be added to Ailtir CI.
 
 ## Initial normalization
 
