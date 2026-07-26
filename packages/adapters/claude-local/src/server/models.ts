@@ -18,10 +18,15 @@ function bedrockRegionPrefix(): string {
 function buildBedrockModels(): AdapterModel[] {
   const p = bedrockRegionPrefix();
   return [
-    { id: `${p}.anthropic.claude-opus-4-8-v1`, label: "Bedrock Opus 4.8" },
+    { id: `${p}.anthropic.claude-opus-5`, label: "Bedrock Opus 5" },
+    { id: `${p}.anthropic.claude-opus-4-8`, label: "Bedrock Opus 4.8" },
+    { id: `${p}.anthropic.claude-opus-4-7`, label: "Bedrock Opus 4.7" },
     { id: "global.anthropic.claude-fable-5", label: "Bedrock Fable 5" },
     { id: `${p}.anthropic.claude-opus-4-6-v1`, label: "Bedrock Opus 4.6" },
-    { id: `${p}.anthropic.claude-sonnet-4-5-20250929-v2:0`, label: "Bedrock Sonnet 4.5" },
+    { id: `${p}.anthropic.claude-opus-4-5-20251101-v1:0`, label: "Bedrock Opus 4.5" },
+    { id: `${p}.anthropic.claude-sonnet-5`, label: "Bedrock Sonnet 5" },
+    { id: `${p}.anthropic.claude-sonnet-4-6`, label: "Bedrock Sonnet 4.6" },
+    { id: `${p}.anthropic.claude-sonnet-4-5-20250929-v1:0`, label: "Bedrock Sonnet 4.5" },
     { id: `${p}.anthropic.claude-haiku-4-5-20251001-v1:0`, label: "Bedrock Haiku 4.5" },
   ];
 }

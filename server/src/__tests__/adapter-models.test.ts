@@ -102,6 +102,26 @@ describe("adapter model listing", () => {
     expect(models.some((model) => model.id === "eu.anthropic.claude-fable-5-v1")).toBe(false);
   });
 
+  it("lists the current active EU Bedrock Claude inference profiles", async () => {
+    process.env.CLAUDE_CODE_USE_BEDROCK = "1";
+    process.env.AWS_REGION = "eu-west-1";
+
+    const models = await listAdapterModels("claude_local");
+
+    expect(models).toEqual([
+      { id: "eu.anthropic.claude-opus-5", label: "Bedrock Opus 5" },
+      { id: "eu.anthropic.claude-opus-4-8", label: "Bedrock Opus 4.8" },
+      { id: "eu.anthropic.claude-opus-4-7", label: "Bedrock Opus 4.7" },
+      { id: "global.anthropic.claude-fable-5", label: "Bedrock Fable 5" },
+      { id: "eu.anthropic.claude-opus-4-6-v1", label: "Bedrock Opus 4.6" },
+      { id: "eu.anthropic.claude-opus-4-5-20251101-v1:0", label: "Bedrock Opus 4.5" },
+      { id: "eu.anthropic.claude-sonnet-5", label: "Bedrock Sonnet 5" },
+      { id: "eu.anthropic.claude-sonnet-4-6", label: "Bedrock Sonnet 4.6" },
+      { id: "eu.anthropic.claude-sonnet-4-5-20250929-v1:0", label: "Bedrock Sonnet 4.5" },
+      { id: "eu.anthropic.claude-haiku-4-5-20251001-v1:0", label: "Bedrock Haiku 4.5" },
+    ]);
+  });
+
   it("loads claude models dynamically and merges fallback options", async () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-test";
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
