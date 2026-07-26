@@ -1343,6 +1343,7 @@ async function ensureManagedProjectWorkspace(input: {
   companyId: string;
   projectId: string;
   repoUrl: string | null;
+  repoRef?: string | null;
 }): Promise<{ cwd: string; warning: string | null }> {
   const cwd = resolveManagedProjectWorkspaceDir({
     companyId: input.companyId,
@@ -1364,7 +1365,35 @@ async function ensureManagedProjectWorkspace(input: {
     .then((entry) => entry.isDirectory())
     .catch(() => false);
   if (gitDirExists) {
-    return { cwd, warning: null };
+    const status = await execFile("git", ["-C", cwd, "status", "--porcelain"], {
+      timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
+    });
+    if (status.stdout.trim()) {
+      return {
+        cwd,
+        warning: `Managed workspace "${cwd}" has local changes, so Paperclip did not synchronize it with the remote.`,
+      };
+    }
+
+    const repoRef = readNonEmptyString(input.repoRef) ?? "HEAD";
+    const cloneEnv = buildManagedCheckoutGitEnv({
+      baseEnv: sanitizeRuntimeServiceBaseEnv(process.env),
+      repoUrl: input.repoUrl,
+    });
+    try {
+      await execFile("git", ["-C", cwd, "fetch", "--prune", "origin", repoRef], {
+        env: cloneEnv,
+        timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
+      });
+      await execFile("git", ["-C", cwd, "merge", "--ff-only", "FETCH_HEAD"], {
+        env: cloneEnv,
+        timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
+      });
+      return { cwd, warning: null };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to synchronize managed checkout "${cwd}" with "${repoRef}": ${reason}`);
+    }
   }
 
   if (stats) {
@@ -1383,7 +1412,11 @@ async function ensureManagedProjectWorkspace(input: {
       baseEnv: sanitizeRuntimeServiceBaseEnv(process.env),
       repoUrl: input.repoUrl,
     });
-    await execFile("git", ["clone", input.repoUrl, cwd], {
+    const cloneArgs = ["clone"];
+    const repoRef = readNonEmptyString(input.repoRef);
+    if (repoRef) cloneArgs.push("--branch", repoRef);
+    cloneArgs.push(input.repoUrl, cwd);
+    await execFile("git", cloneArgs, {
       env: cloneEnv,
       timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
     });
@@ -7435,6 +7468,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
               companyId: agent.companyId,
               projectId: workspaceProjectId ?? resolvedProjectId ?? workspace.projectId,
               repoUrl: readNonEmptyString(workspace.repoUrl),
+              repoRef: readNonEmptyString(workspace.repoRef),
             });
             projectCwd = managedWorkspace.cwd;
             managedWorkspaceWarning = managedWorkspace.warning;
@@ -7531,6 +7565,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         companyId: agent.companyId,
         projectId: workspaceProjectId,
         repoUrl: null,
+        repoRef: null,
       });
       return {
         cwd: managedWorkspace.cwd,
