@@ -84,8 +84,31 @@ interface CompanyImportOptions extends BaseClientOptions {
   collision?: CompanyCollisionMode;
   ref?: string;
   paperclipUrl?: string;
+  secretValueEnv?: string[];
   yes?: boolean;
   dryRun?: boolean;
+}
+
+function collectOptionValue(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+export function parseSecretValueEnv(values: string[] | undefined): Record<string, string> | undefined {
+  if (!values || values.length === 0) return undefined;
+  const entries = values.map((raw) => {
+    const separator = raw.indexOf("=");
+    if (separator <= 0 || separator === raw.length - 1) {
+      throw new Error(`Invalid --secret-value-env "${raw}". Use key=ENV_VAR.`);
+    }
+    const key = raw.slice(0, separator).trim();
+    const envName = raw.slice(separator + 1).trim();
+    const value = process.env[envName];
+    if (!value?.trim()) {
+      throw new Error(`Environment variable "${envName}" is missing or empty.`);
+    }
+    return [key, value] as const;
+  });
+  return Object.fromEntries(entries);
 }
 
 const DEFAULT_EXPORT_INCLUDE: CompanyPortabilityInclude = {
@@ -1418,6 +1441,12 @@ export function registerCompanyCommands(program: Command): void {
       .option("--collision <mode>", "Collision strategy: rename | skip | replace", "rename")
       .option("--ref <value>", "Git ref to use for GitHub imports (branch, tag, or commit)")
       .option("--paperclip-url <url>", "Alias for --api-base on this command")
+      .option(
+        "--secret-value-env <key=ENV_VAR>",
+        "Read a secret env input value from an environment variable; may be repeated",
+        collectOptionValue,
+        [] as string[],
+      )
       .option("--yes", "Accept default selection and skip the pre-import confirmation prompt", false)
       .option("--dry-run", "Run preview only without applying", false)
       .action(async (fromPathOrUrl: string, opts: CompanyImportOptions) => {
@@ -1579,6 +1608,7 @@ export function registerCompanyCommands(program: Command): void {
           const imported = await ctx.api.post<CompanyPortabilityImportResult>(importApiPath, {
             ...previewPayload,
             adapterOverrides,
+            secretValues: parseSecretValueEnv(opts.secretValueEnv),
           });
           if (!imported) {
             throw new Error("Import request returned no data.");

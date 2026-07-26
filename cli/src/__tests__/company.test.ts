@@ -10,12 +10,29 @@ import {
   renderCompanyImportPreview,
   renderCompanyImportResult,
   registerCompanyCommands,
+  parseSecretValueEnv,
   resolveCompanyImportApplyConfirmationMode,
   resolveCompanyImportApiPath,
 } from "../commands/client/company.js";
 
 const ORIGINAL_ENV = { ...process.env };
 const COMPANY_ID = "22222222-2222-4222-8222-222222222222";
+
+describe("parseSecretValueEnv", () => {
+  it("reads secret values without placing them in command arguments", () => {
+    process.env.PAPERCLIP_TEST_SECRET = "secret-value";
+    expect(parseSecretValueEnv(["agent:release:PULUMI_ACCESS_TOKEN=PAPERCLIP_TEST_SECRET"])).toEqual({
+      "agent:release:PULUMI_ACCESS_TOKEN": "secret-value",
+    });
+  });
+
+  it("rejects missing environment values", () => {
+    delete process.env.PAPERCLIP_TEST_MISSING_SECRET;
+    expect(() =>
+      parseSecretValueEnv(["PULUMI_ACCESS_TOKEN=PAPERCLIP_TEST_MISSING_SECRET"])
+    ).toThrow('Environment variable "PAPERCLIP_TEST_MISSING_SECRET" is missing or empty.');
+  });
+});
 
 function makeProgram(): Command {
   const program = new Command();
