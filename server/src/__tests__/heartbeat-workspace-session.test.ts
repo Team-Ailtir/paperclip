@@ -12,6 +12,7 @@ import {
   assertGitSensitiveAdapterWorkspaceValid,
   assertGitWorktreeBaseWorkspaceReady,
   assertPushCapabilityCheckoutValid,
+  buildManagedCheckoutGitEnv,
   buildExplicitResumeSessionOverride,
   buildEffectiveRunSessionConfigMetadata,
   buildEffectiveRunWorkspaceConfigMetadata,
@@ -50,6 +51,50 @@ import {
 import type { TrustPresetResolution } from "../services/trust-preset-resolver.ts";
 
 const execFile = promisify(execFileCallback);
+
+describe("buildManagedCheckoutGitEnv", () => {
+  it("uses gh as a scoped credential helper for authenticated GitHub HTTPS clones", () => {
+    const env = buildManagedCheckoutGitEnv({
+      baseEnv: {
+        GH_TOKEN: "github-token",
+        GIT_CONFIG_COUNT: "1",
+        GIT_CONFIG_KEY_0: "user.name",
+        GIT_CONFIG_VALUE_0: "Paperclip",
+      },
+      repoUrl: "https://github.com/Team-Ailtir/infrastructure.git",
+    });
+
+    expect(env).toMatchObject({
+      GH_TOKEN: "github-token",
+      GIT_TERMINAL_PROMPT: "0",
+      GIT_CONFIG_COUNT: "2",
+      GIT_CONFIG_KEY_0: "user.name",
+      GIT_CONFIG_VALUE_0: "Paperclip",
+      GIT_CONFIG_KEY_1: "credential.https://github.com.helper",
+      GIT_CONFIG_VALUE_1: "!gh auth git-credential",
+    });
+  });
+
+  it("does not install the GitHub helper for unrelated Git hosts", () => {
+    const env = buildManagedCheckoutGitEnv({
+      baseEnv: { GITHUB_TOKEN: "github-token" },
+      repoUrl: "https://gitlab.example.com/team/project.git",
+    });
+
+    expect(env.GIT_TERMINAL_PROMPT).toBe("0");
+    expect(env.GIT_CONFIG_COUNT).toBeUndefined();
+    expect(Object.values(env)).not.toContain("!gh auth git-credential");
+  });
+
+  it("does not install the helper when no GitHub token is available", () => {
+    const env = buildManagedCheckoutGitEnv({
+      baseEnv: {},
+      repoUrl: "https://github.com/Team-Ailtir/infrastructure.git",
+    });
+
+    expect(env).toEqual({ GIT_TERMINAL_PROMPT: "0" });
+  });
+});
 
 function buildResolvedWorkspace(overrides: Partial<ResolvedWorkspaceForRun> = {}): ResolvedWorkspaceForRun {
   return {

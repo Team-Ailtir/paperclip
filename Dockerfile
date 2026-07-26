@@ -71,7 +71,11 @@ ARG PAPERCLIP_BUILD_COMMIT=""
 # the @latest CLI tools advance weekly). Without it the cached layer would
 # freeze the tools until an unrelated cache bust.
 ARG CLI_TOOLS_CACHE_EPOCH=""
+ARG AWS_CLI_VERSION=2.35.21
+ARG PULUMI_VERSION=3.253.0
+ARG TARGETARCH
 WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:0.11.1 /uv /uvx /usr/local/bin/
 # Tool and OS layer BEFORE the app copy: it references nothing from /app, and
 # the app copy changes on every commit — ordered the other way around, this
 # (the single most expensive layer: four CLI toolchains + apt, per arch) can
@@ -79,7 +83,28 @@ WORKDIR /app
 RUN echo "cli-tools-epoch: ${CLI_TOOLS_CACHE_EPOCH}" \
   && npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai @google/gemini-cli@latest \
   && apt-get update \
-  && apt-get install -y --no-install-recommends openssh-client jq \
+  && apt-get install -y --no-install-recommends openssh-client jq unzip make groff less \
+  && case "$TARGETARCH" in \
+       amd64) AWS_ARCH=x86_64; PULUMI_ARCH=x64 ;; \
+       arm64) AWS_ARCH=aarch64; PULUMI_ARCH=arm64 ;; \
+       *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+     esac \
+  && mkdir -p /tmp/tool-install \
+  && curl --fail --silent --show-error --location \
+       "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}-${AWS_CLI_VERSION}.zip" \
+       --output /tmp/tool-install/awscliv2.zip \
+  && unzip -q /tmp/tool-install/awscliv2.zip -d /tmp/tool-install \
+  && /tmp/tool-install/aws/install \
+  && curl --fail --silent --show-error --location \
+       "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-${PULUMI_ARCH}.tar.gz" \
+       --output /tmp/tool-install/pulumi.tar.gz \
+  && tar -xzf /tmp/tool-install/pulumi.tar.gz -C /tmp/tool-install \
+  && install /tmp/tool-install/pulumi/pulumi /usr/local/bin/pulumi \
+  && aws --version \
+  && pulumi version \
+  && uv --version \
+  && make --version \
+  && rm -rf /tmp/tool-install \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /paperclip \
   && chown node:node /paperclip

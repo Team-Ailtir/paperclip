@@ -1741,6 +1741,34 @@ export async function resolveAdditionalProjectWorkspace(
   };
 }
 
+export function buildManagedCheckoutGitEnv(input: {
+  baseEnv: NodeJS.ProcessEnv;
+  repoUrl: string;
+}): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...input.baseEnv, GIT_TERMINAL_PROMPT: "0" };
+  const token = readNonEmptyString(env.GH_TOKEN) ?? readNonEmptyString(env.GITHUB_TOKEN);
+  if (!token) return env;
+
+  let hostname: string;
+  try {
+    const parsed = new URL(input.repoUrl);
+    if (parsed.protocol !== "https:") return env;
+    hostname = parsed.hostname.toLowerCase();
+  } catch {
+    return env;
+  }
+
+  const configuredGitHubHost = readNonEmptyString(env.GH_HOST)?.toLowerCase() ?? "github.com";
+  if (hostname !== "github.com" && hostname !== configuredGitHubHost) return env;
+
+  const configuredCount = Number.parseInt(env.GIT_CONFIG_COUNT ?? "0", 10);
+  const configIndex = Number.isSafeInteger(configuredCount) && configuredCount >= 0 ? configuredCount : 0;
+  env.GIT_CONFIG_COUNT = String(configIndex + 1);
+  env[`GIT_CONFIG_KEY_${configIndex}`] = `credential.https://${hostname}.helper`;
+  env[`GIT_CONFIG_VALUE_${configIndex}`] = "!gh auth git-credential";
+  return env;
+}
+
 type WorkspaceValidationFailureLike = WorkspaceValidationFailure | {
   code: typeof WORKSPACE_VALIDATION_FAILURE_CODE;
   resultJson: Record<string, unknown>;

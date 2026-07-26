@@ -54,6 +54,10 @@ function installStubs(ids: { uid: number; gid: number; nodeUid?: number; nodeGid
   // a GID-only remap).
   writeStub("find", ids.homeMismatch ? `echo "$1/mismatched-entry"` : `true`);
   writeStub("gosu", `echo "gosu $*" >> "${logFile}"\nshift\nexec "$@"`);
+  writeStub(
+    "gh",
+    `echo "gh $*" >> "${logFile}"\nif [ "$1" = "auth" ] && [ "$2" = "status" ]; then exit 0; fi`,
+  );
 }
 
 async function runEntrypoint(env: Record<string, string> = {}) {
@@ -138,6 +142,16 @@ describe("docker-entrypoint.sh", () => {
     const { calls } = await runEntrypoint({ PAPERCLIP_HOME: stubDir });
 
     expect(calls).toContain(`chown -R node:node ${stubDir}`);
+  });
+
+  it("configures gh as the runtime user's Git credential helper when a token is present", async () => {
+    installStubs({ uid: 0, gid: 0 });
+
+    const { calls } = await runEntrypoint({ GH_TOKEN: "github-token" });
+
+    expect(calls).toContain("gosu node gh auth status --hostname github.com");
+    expect(calls).toContain("gosu node gh auth setup-git --hostname github.com");
+    expect(calls).not.toContain("github-token");
   });
 
   it("repairs the legacy Ailtir config at the stable config path", async () => {

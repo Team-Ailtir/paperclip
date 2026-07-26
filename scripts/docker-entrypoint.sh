@@ -84,4 +84,15 @@ if [ -d "$home_dir" ] && [ -n "$(find "$home_dir" \( ! -user node -o ! -group no
     chown -R node:node "$home_dir"
 fi
 
+# GH_TOKEN and GITHUB_TOKEN authenticate the GitHub CLI, but plain Git does not
+# consume either variable. Configure gh as Git's credential helper for the
+# runtime user without persisting the token itself.
+if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+    if gosu node gh auth status --hostname github.com >/dev/null 2>&1; then
+        gosu node gh auth setup-git --hostname github.com
+    else
+        echo "docker-entrypoint.sh: GitHub token is present but gh authentication failed" >&2
+    fi
+fi
+
 exec gosu node "$@"
