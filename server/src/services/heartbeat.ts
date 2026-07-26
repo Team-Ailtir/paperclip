@@ -1379,8 +1379,12 @@ async function ensureManagedProjectWorkspace(input: {
   }
 
   try {
+    const cloneEnv = buildManagedCheckoutGitEnv({
+      baseEnv: sanitizeRuntimeServiceBaseEnv(process.env),
+      repoUrl: input.repoUrl,
+    });
     await execFile("git", ["clone", input.repoUrl, cwd], {
-      env: sanitizeRuntimeServiceBaseEnv(process.env),
+      env: cloneEnv,
       timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
     });
     return { cwd, warning: null };
@@ -1388,6 +1392,34 @@ async function ensureManagedProjectWorkspace(input: {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to prepare managed checkout for "${input.repoUrl}" at "${cwd}": ${reason}`);
   }
+}
+
+export function buildManagedCheckoutGitEnv(input: {
+  baseEnv: NodeJS.ProcessEnv;
+  repoUrl: string;
+}): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...input.baseEnv, GIT_TERMINAL_PROMPT: "0" };
+  const token = readNonEmptyString(env.GH_TOKEN) ?? readNonEmptyString(env.GITHUB_TOKEN);
+  if (!token) return env;
+
+  let hostname: string;
+  try {
+    const parsed = new URL(input.repoUrl);
+    if (parsed.protocol !== "https:") return env;
+    hostname = parsed.hostname.toLowerCase();
+  } catch {
+    return env;
+  }
+
+  const configuredGitHubHost = readNonEmptyString(env.GH_HOST)?.toLowerCase() ?? "github.com";
+  if (hostname !== "github.com" && hostname !== configuredGitHubHost) return env;
+
+  const configuredCount = Number.parseInt(env.GIT_CONFIG_COUNT ?? "0", 10);
+  const configIndex = Number.isSafeInteger(configuredCount) && configuredCount >= 0 ? configuredCount : 0;
+  env.GIT_CONFIG_COUNT = String(configIndex + 1);
+  env[`GIT_CONFIG_KEY_${configIndex}`] = `credential.https://${hostname}.helper`;
+  env[`GIT_CONFIG_VALUE_${configIndex}`] = "!gh auth git-credential";
+  return env;
 }
 
 type WorkspaceValidationFailureLike = WorkspaceValidationFailure | {
@@ -7383,6 +7415,11 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         ? projectWorkspaceRows.find((workspace) => workspace.id === preferredProjectWorkspaceId) ?? null
         : null;
       const missingProjectCwds: string[] = [];
+      const managedWorkspaceErrors: Array<{
+        workspaceId: string;
+        repoUrl: string | null;
+        message: string;
+      }> = [];
       let hasConfiguredProjectCwd = false;
       let preferredWorkspaceWarning: string | null = null;
       if (preferredProjectWorkspaceId && !preferredWorkspace) {
@@ -7402,6 +7439,11 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
             projectCwd = managedWorkspace.cwd;
             managedWorkspaceWarning = managedWorkspace.warning;
           } catch (error) {
+            managedWorkspaceErrors.push({
+              workspaceId: workspace.id,
+              repoUrl: readNonEmptyString(workspace.repoUrl),
+              message: error instanceof Error ? error.message : String(error),
+            });
             if (preferredWorkspace?.id === workspace.id) {
               preferredWorkspaceWarning = error instanceof Error ? error.message : String(error);
             }
@@ -7432,6 +7474,25 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
             `Selected project workspace path "${projectCwd}" is not available yet.`;
         }
         missingProjectCwds.push(projectCwd);
+      }
+
+      if (!hasConfiguredProjectCwd && managedWorkspaceErrors.length > 0) {
+        const selectedError =
+          managedWorkspaceErrors.find((item) => item.workspaceId === preferredProjectWorkspaceId) ??
+          managedWorkspaceErrors[0];
+        throw new WorkspaceValidationFailure(
+          `Failed to realize the managed project checkout for issue "${issueId ?? "unknown"}": ${selectedError.message}`,
+          {
+            workspaceValidation: {
+              reason: "managed_checkout_failed",
+              issueId,
+              projectId: resolvedProjectId,
+              projectWorkspaceId: selectedError.workspaceId,
+              repoUrl: selectedError.repoUrl,
+              attemptedWorkspaceCount: managedWorkspaceErrors.length,
+            },
+          },
+        );
       }
 
       const fallbackCwd = resolveDefaultAgentWorkspaceDir(agent.id);

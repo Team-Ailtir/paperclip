@@ -63,11 +63,36 @@ ARG USER_GID=1000
 # (the image has no .git, so the server cannot derive it at runtime). Empty for
 # local `docker build`, which just leaves the server on its normal fallbacks.
 ARG PAPERCLIP_BUILD_VERSION=""
+ARG AWS_CLI_VERSION=2.35.21
+ARG PULUMI_VERSION=3.253.0
+ARG TARGETARCH
 WORKDIR /app
 COPY --chown=node:node --from=build /app /app
+COPY --from=ghcr.io/astral-sh/uv:0.11.1 /uv /uvx /usr/local/bin/
 RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai @google/gemini-cli@latest \
   && apt-get update \
-  && apt-get install -y --no-install-recommends openssh-client jq \
+  && apt-get install -y --no-install-recommends openssh-client jq unzip make groff less \
+  && case "$TARGETARCH" in \
+       amd64) AWS_ARCH=x86_64; PULUMI_ARCH=x64 ;; \
+       arm64) AWS_ARCH=aarch64; PULUMI_ARCH=arm64 ;; \
+       *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+     esac \
+  && mkdir -p /tmp/tool-install \
+  && curl --fail --silent --show-error --location \
+       "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}-${AWS_CLI_VERSION}.zip" \
+       --output /tmp/tool-install/awscliv2.zip \
+  && unzip -q /tmp/tool-install/awscliv2.zip -d /tmp/tool-install \
+  && /tmp/tool-install/aws/install \
+  && curl --fail --silent --show-error --location \
+       "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-${PULUMI_ARCH}.tar.gz" \
+       --output /tmp/tool-install/pulumi.tar.gz \
+  && tar -xzf /tmp/tool-install/pulumi.tar.gz -C /tmp/tool-install \
+  && install /tmp/tool-install/pulumi/pulumi /usr/local/bin/pulumi \
+  && aws --version \
+  && pulumi version \
+  && uv --version \
+  && make --version \
+  && rm -rf /tmp/tool-install \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /paperclip \
   && chown node:node /paperclip
