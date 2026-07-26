@@ -83,7 +83,8 @@ RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/cod
        "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-${PULUMI_ARCH}.tar.gz" \
        --output /tmp/tool-install/pulumi.tar.gz \
   && tar -xzf /tmp/tool-install/pulumi.tar.gz -C /tmp/tool-install \
-  && install /tmp/tool-install/pulumi/pulumi /usr/local/bin/pulumi \
+  && find /tmp/tool-install/pulumi -maxdepth 1 -type f -name 'pulumi*' -executable \
+       -exec install {} /usr/local/bin/ \; \
   && aws --version \
   && pulumi version \
   && uv --version \
