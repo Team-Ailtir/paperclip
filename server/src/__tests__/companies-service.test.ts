@@ -65,7 +65,7 @@ describeEmbeddedPostgres("companyService", () => {
     await tempDb?.cleanup();
   });
 
-  it("retries generated issue prefixes when Drizzle wraps the unique constraint error", async () => {
+  it("retries generated issue prefixes after a conflict", async () => {
     await db.insert(companies).values({
       name: "Aron Existing",
       issuePrefix: "ARO",
@@ -79,6 +79,21 @@ describeEmbeddedPostgres("companyService", () => {
 
     const rows = await db.select({ issuePrefix: companies.issuePrefix }).from(companies);
     expect(rows.map((row) => row.issuePrefix).sort()).toEqual(["ARO", "AROA"]);
+  });
+
+  it("retries generated issue prefixes inside an atomic transaction", async () => {
+    await db.insert(companies).values({
+      name: "ASDL Existing",
+      issuePrefix: "ASD",
+    });
+
+    const created = await db.transaction(async (tx) =>
+      companyService(tx).create({
+        name: "ASDL Replacement",
+      }),
+    );
+
+    expect(created.issuePrefix).toBe("ASDA");
   });
 
   it("auto-provisions one paused Reflection Coach bundle for a freshly created company", async () => {
