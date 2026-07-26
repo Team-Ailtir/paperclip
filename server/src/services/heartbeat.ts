@@ -1495,6 +1495,7 @@ export async function ensureManagedProjectWorkspace(input: {
   companyId: string;
   projectId: string;
   repoUrl: string | null;
+  repoRef?: string | null;
   /** Optional git credential source for cloning private repos; null/absent preserves ambient behavior. */
   resolveGitAuth?: GitRemoteAuthProvider | null;
 }): Promise<{ cwd: string; warning: string | null }> {
@@ -1516,6 +1517,7 @@ async function materializeManagedProjectWorkspace(
   cwd: string,
   input: {
     repoUrl: string | null;
+    repoRef?: string | null;
     resolveGitAuth?: GitRemoteAuthProvider | null;
   },
 ): Promise<{ cwd: string; warning: string | null }> {
@@ -1534,8 +1536,38 @@ async function materializeManagedProjectWorkspace(
       .stat(path.resolve(cwd, ".git"))
       .then((entry) => entry.isDirectory())
       .catch(() => false);
+  const auth = input.resolveGitAuth ? await input.resolveGitAuth(input.repoUrl) : null;
+  const gitEnv = {
+    ...sanitizeRuntimeServiceBaseEnv(process.env),
+    GIT_TERMINAL_PROMPT: "0",
+    ...(auth?.env ?? {}),
+  };
   if (await hasAdoptableGitDir()) {
-    return { cwd, warning: null };
+    const status = await execFile("git", ["-C", cwd, "status", "--porcelain"], {
+      timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
+    });
+    if (status.stdout.trim()) {
+      return {
+        cwd,
+        warning: `Managed workspace "${cwd}" has local changes, so Paperclip did not synchronize it with the remote.`,
+      };
+    }
+
+    const repoRef = readNonEmptyString(input.repoRef) ?? "HEAD";
+    try {
+      await execFile("git", [...(auth?.configArgs ?? []), "-C", cwd, "fetch", "--prune", "origin", repoRef], {
+        env: gitEnv,
+        timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
+      });
+      await execFile("git", [...(auth?.configArgs ?? []), "-C", cwd, "merge", "--ff-only", "FETCH_HEAD"], {
+        env: gitEnv,
+        timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
+      });
+      return { cwd, warning: null };
+    } catch (error) {
+      const reason = scrubGitCredentialText(error instanceof Error ? error.message : String(error));
+      throw new Error(`Failed to synchronize managed checkout "${cwd}" with "${repoRef}": ${reason}`);
+    }
   }
 
   if (stats) {
@@ -1553,19 +1585,14 @@ async function materializeManagedProjectWorkspace(
   // is never created in a partial state and never removed on failure, so a concurrent
   // materialization (another process, or a run racing this one) can neither adopt a broken
   // checkout nor lose its own completed one.
-  const auth = input.resolveGitAuth ? await input.resolveGitAuth(input.repoUrl) : null;
   const cloneTmpDir = await fs.mkdtemp(`${cwd}.clone-`);
   try {
-    await execFile("git", [...(auth?.configArgs ?? []), "clone", input.repoUrl, cloneTmpDir], {
-      env: {
-        // Spread order matters: the sanitizer strips PAPERCLIP_*, which would remove the
-        // credential-helper token env if it came first. GIT_TERMINAL_PROMPT=0 fails a
-        // credential-less private clone immediately instead of hanging on a prompt until
-        // the clone timeout.
-        ...sanitizeRuntimeServiceBaseEnv(process.env),
-        GIT_TERMINAL_PROMPT: "0",
-        ...(auth?.env ?? {}),
-      },
+    const cloneArgs = [...(auth?.configArgs ?? []), "clone"];
+    const repoRef = readNonEmptyString(input.repoRef);
+    if (repoRef) cloneArgs.push("--branch", repoRef);
+    cloneArgs.push(input.repoUrl, cloneTmpDir);
+    await execFile("git", cloneArgs, {
+      env: gitEnv,
       timeout: MANAGED_WORKSPACE_GIT_CLONE_TIMEOUT_MS,
     });
   } catch (error) {
@@ -1606,6 +1633,7 @@ async function resolveConfiguredOrManagedProjectCwd(input: {
   projectId: string;
   cwd: string | null;
   repoUrl: string | null;
+  repoRef?: string | null;
   resolveGitAuth?: GitRemoteAuthProvider | null;
 }): Promise<{ cwd: string; warning: string | null }> {
   const configuredCwd = readNonEmptyString(input.cwd);
@@ -1616,6 +1644,7 @@ async function resolveConfiguredOrManagedProjectCwd(input: {
     companyId: input.companyId,
     projectId: input.projectId,
     repoUrl: readNonEmptyString(input.repoUrl),
+    repoRef: readNonEmptyString(input.repoRef),
     resolveGitAuth: input.resolveGitAuth ?? null,
   });
 }
@@ -8525,6 +8554,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
             projectId: workspaceProjectId ?? resolvedProjectId ?? workspace.projectId,
             cwd: workspace.cwd,
             repoUrl: workspace.repoUrl,
+            repoRef: workspace.repoRef,
             resolveGitAuth,
           });
           projectCwd = resolvedCwd.cwd;
@@ -8600,6 +8630,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         companyId: agent.companyId,
         projectId: workspaceProjectId,
         repoUrl: null,
+        repoRef: null,
       });
       return {
         cwd: managedWorkspace.cwd,
