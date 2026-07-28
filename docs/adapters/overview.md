@@ -32,6 +32,11 @@ When a heartbeat fires, Paperclip:
 
 ## Credential ownership for sandbox targets
 
+> Deploying on ECS/Fargate and want the local CLI adapters to bill against your
+> Claude/Codex/Gemini **subscriptions** instead of AWS Bedrock or API keys? See
+> [Subscription auth on ECS](/adapters/subscription-auth-on-ecs) for the
+> seed-credentials-onto-EFS procedure and caveats.
+
 Local CLI adapters can run on the Paperclip host, SSH targets, or managed
 sandbox targets. The adapter decides which credential home is authoritative
 before the CLI starts:
