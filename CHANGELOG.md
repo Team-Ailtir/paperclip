@@ -6,13 +6,13 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 <!-- AILTIR-CURRENT:START -->
 ## Current State
 
-- Upstream base: `cca2806e57c272ed919b1cde224d3d2a23d2f668`
-- Ailtir source: `0d46440f62c2cb047a3999c3affac506a0ad9d96`
-- Image tag: `0d46440f6`
-- Image digest: `sha256:b413e66cf570a7e0a6e50b467933d4042c8a73dd2041f80ef7b7a904a723b6dc`
-- Infrastructure commit: `e79b8c4`
-- Live version: `0.3.1-0d46440f6`
-- Verification: Candidate CI passed; import created ASDL with 8 agents, 9 projects, 3 goals, and approvals; AIL-1 label-poll Claude/Bedrock smoke succeeded; all ASDL heartbeats disabled; forced ECS replacement preserved company state.
+- Upstream base: `ca92f727c5f7e4a6e5d23d05fef188bee9066b81`
+- Ailtir source: `eb86b60af78f2a31b0c42e8cb09d7b529c17c295`
+- Image tag: `not published`
+- Image digest: `not published`
+- Infrastructure commit: `not deployed`
+- Live version: `not deployed`
+- Verification: pending
 
 ## Active Downstream Patches
 
@@ -32,9 +32,15 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 | Resolve Claude Bedrock defaults | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `41421f48f` | proposed upstream | 2026-07-25 |
 | Resolve Bedrock defaults before hire approval | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `77f0343e1` | proposed upstream | 2026-07-25 |
 | Atomic new-company imports | [upstream PR #10248](https://github.com/paperclipai/paperclip/pull/10248) | `028ccbdff` | proposed upstream | 2026-07-25 |
+| Claude Sonnet 5 static catalog | [upstream PR #10280](https://github.com/paperclipai/paperclip/pull/10280) | `d7c06de6b`, `92a05c1e0` | proposed upstream; head `02c177c24` | pending |
+| Tolerate unsupported ACP effort control | [upstream issue #10175](https://github.com/paperclipai/paperclip/issues/10175), [PR #10436](https://github.com/paperclipai/paperclip/pull/10436) | `eb86b60af` | proposed upstream; head `bef552d90`; CI green; Greptile 5/5 | pending |
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-07-29 12:58 UTC
+
+Synchronized the Ailtir patch queue to pinned upstream `ca92f727c`, integrated reviewed Sonnet 5 catalog PR #10280 at head `02c177c24`, and accelerated the green Greptile 5/5 ACP effort fix PR #10436 at head `bef552d90`. Focused tests: 17 adapter catalog tests and 87 ACPX engine tests.
 
 ### 2026-07-25 15:07 UTC
 
