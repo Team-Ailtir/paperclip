@@ -67,7 +67,11 @@ ARG AWS_CLI_VERSION=2.35.21
 ARG PULUMI_VERSION=3.253.0
 ARG TARGETARCH
 WORKDIR /app
-COPY --chown=node:node --from=build /app /app
+# This layer only installs global CLI tools and system packages - nothing
+# here depends on /app, so it's ordered before the build-output COPY below.
+# That keeps it cached across releases that only touch app source or
+# package.json versions (e.g. version-stamp), instead of re-fetching the
+# CLIs/AWS CLI/Pulumi on every deploy.
 COPY --from=ghcr.io/astral-sh/uv:0.11.1 /uv /uvx /usr/local/bin/
 RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai @google/gemini-cli@latest \
   && apt-get update \
@@ -98,6 +102,7 @@ RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/cod
   && mkdir -p /paperclip \
   && chown node:node /paperclip
 
+COPY --chown=node:node --from=build /app /app
 COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
