@@ -69,7 +69,7 @@ WORKDIR /app
 # package.json versions (e.g. version-stamp), instead of re-fetching the
 # CLIs/AWS CLI/Pulumi on every deploy.
 COPY --from=ghcr.io/astral-sh/uv:0.11.1 /uv /uvx /usr/local/bin/
-RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai @google/gemini-cli@latest \
+RUN npm install --global --omit=dev @anthropic-ai/claude-code@2.1.220 @openai/codex@0.145.0 opencode-ai@1.18.5 @google/gemini-cli@0.52.0 \
   && apt-get update \
   && apt-get install -y --no-install-recommends openssh-client jq unzip make groff less \
   && case "$TARGETARCH" in \
