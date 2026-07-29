@@ -1710,6 +1710,7 @@ describe("realizeExecutionWorkspace", () => {
     const fakeBin = path.join(tempRoot, "bin");
     const fakePnpmPath = path.join(fakeBin, "pnpm");
     const scriptPath = path.join(worktreeRoot, "provision-worktree.sh");
+    const sourceConfigPath = path.join(tempRoot, "source-config.json");
 
     try {
       await fs.mkdir(baseRoot, { recursive: true });
@@ -1717,6 +1718,7 @@ describe("realizeExecutionWorkspace", () => {
       await fs.mkdir(fakeBin, { recursive: true });
       await fs.copyFile(provisionWorktreeScriptPath, scriptPath);
       await fs.chmod(scriptPath, 0o755);
+      await fs.writeFile(sourceConfigPath, "{}\n", "utf8");
       await fs.writeFile(
         fakePnpmPath,
         [
@@ -1742,6 +1744,7 @@ describe("realizeExecutionWorkspace", () => {
           env: {
             ...process.env,
             PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+            PAPERCLIP_CONFIG: sourceConfigPath,
             PAPERCLIP_WORKSPACE_BASE_CWD: baseRoot,
             PAPERCLIP_WORKSPACE_CWD: worktreeRoot,
           },
@@ -1835,6 +1838,7 @@ describe("realizeExecutionWorkspace", () => {
         env: {
           ...process.env,
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+          PAPERCLIP_CONFIG: path.join(paperclipDir, "config.json"),
           PAPERCLIP_WORKSPACE_BASE_CWD: baseRoot,
           PAPERCLIP_WORKSPACE_CWD: worktreeRoot,
         },

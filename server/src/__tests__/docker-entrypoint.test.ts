@@ -80,7 +80,8 @@ describe("docker-entrypoint.sh", () => {
     expect(stdout).toContain("ENTRYPOINT-CMD-RAN");
     expect(calls).toContain("gosu node echo ENTRYPOINT-CMD-RAN");
     expect(calls).not.toContain("usermod");
-    expect(calls).toContain("chown -R node:node /paperclip");
+    expect(calls).toContain(`chown -R node:node ${stubDir}`);
+    expect(calls).not.toContain("chown -R node:node /paperclip");
   });
 
   it("remaps the node user and chowns /paperclip before gosu when root requests a different UID/GID", async () => {
