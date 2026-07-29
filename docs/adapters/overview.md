@@ -34,8 +34,9 @@ When a heartbeat fires, Paperclip:
 
 > Deploying on ECS/Fargate and want the local CLI adapters to bill against your
 > Claude/Codex/Gemini **subscriptions** instead of AWS Bedrock or API keys? See
-> [Subscription auth on ECS](/adapters/subscription-auth-on-ecs) for the
-> seed-credentials-onto-EFS procedure and caveats.
+> [Subscription auth on ECS](/adapters/subscription-auth-on-ecs): Claude is wired
+> through an injected `CLAUDE_CODE_OAUTH_TOKEN` Pulumi secret (no manual seeding),
+> while Codex/Gemini still use the seed-credentials-onto-EFS procedure.
 
 Local CLI adapters can run on the Paperclip host, SSH targets, or managed
 sandbox targets. The adapter decides which credential home is authoritative
