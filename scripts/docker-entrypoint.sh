@@ -81,8 +81,16 @@ with open(temporary_path, 'w') as config_file:
 os.replace(temporary_path, path)
 PY
 
-# Fix ownership after all root writes are done.
-chown -R node:node /paperclip
+# Always fix ownership of the config path, since it may have just been
+# written as root. Only chown the whole volume when the node UID/GID
+# actually changed -- on a stable deploy (the common case) everything
+# already on the volume is owned correctly, so a full recursive chown
+# would just be an expensive no-op walk of the whole tree.
+chown -R node:node "$(dirname "$CONFIG_PATH")"
+
+if [ "$changed" -eq 1 ]; then
+    chown -R node:node /paperclip
+fi
 
 # GH_TOKEN and GITHUB_TOKEN authenticate the GitHub CLI, but plain Git does not
 # consume either variable. Configure gh as Git's credential helper for the
