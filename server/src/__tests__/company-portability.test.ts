@@ -3010,7 +3010,7 @@ describe("company portability", () => {
               "    adapter:",
               "      type: claude_local",
               "      config:",
-              "        model: eu.anthropic.claude-sonnet-5",
+              "        model: eu.anthropic.claude-sonnet-999",
               "",
             ].join("\n"),
           },
@@ -3030,7 +3030,7 @@ describe("company portability", () => {
       });
 
       expect(preview.errors).toContain(
-        'Agent coder model "eu.anthropic.claude-sonnet-5" is not available for adapter claude_local.',
+        'Agent coder model "eu.anthropic.claude-sonnet-999" is not available for adapter claude_local.',
       );
     } finally {
       if (previousBedrock === undefined) delete process.env.CLAUDE_CODE_USE_BEDROCK;
