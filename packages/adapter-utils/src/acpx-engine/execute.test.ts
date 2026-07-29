@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AcpRuntimeOptions } from "acpx/runtime";
+import { AcpRuntimeError, type AcpRuntimeOptions } from "acpx/runtime";
 import type { AdapterExecutionContext, AdapterRuntimeMcpAccess } from "@paperclipai/adapter-utils";
 import {
   DEFAULT_REMOTE_SANDBOX_ADAPTER_TIMEOUT_SEC,
@@ -128,6 +128,7 @@ function createLocalSandboxRunner(
 function buildRuntime(
   onSetConfigOption?: (input: { key: string; value: string }) => void,
   onEnsureSession?: (input: Record<string, unknown>) => void,
+  setConfigOptionError?: (input: { key: string; value: string }) => Error | undefined,
 ) {
   return {
     ensureSession: async (input: Record<string, unknown>) => {
@@ -146,6 +147,8 @@ function buildRuntime(
       cancel: async () => {},
     }),
     setConfigOption: async (input: { key: string; value: string }) => {
+      const error = setConfigOptionError?.(input);
+      if (error) throw error;
       onSetConfigOption?.(input);
     },
     close: async () => {},
@@ -162,6 +165,7 @@ async function runExecutor(
     runtimeMcp?: AdapterRuntimeMcpAccess;
     prepareRemoteManagedHome?: AcpxEngineExecutorOptions["prepareRemoteManagedHome"];
     startupTraceContext?: AdapterExecutionContext["startupTraceContext"];
+    setConfigOptionError?: (input: { key: string; value: string }) => Error | undefined;
   } = {},
 ) {
   const runtimeOptions: Record<string, unknown>[] = [];
@@ -174,11 +178,12 @@ async function runExecutor(
     ...(options.prepareRemoteManagedHome
       ? { prepareRemoteManagedHome: options.prepareRemoteManagedHome }
       : {}),
-    createRuntime: (options) => {
-      runtimeOptions.push(options as unknown as Record<string, unknown>);
+    createRuntime: (runtimeCreateOptions) => {
+      runtimeOptions.push(runtimeCreateOptions as unknown as Record<string, unknown>);
       return buildRuntime(
         ({ key, value }) => configOptions.push({ key, value }),
         (input) => sessionInputs.push(input),
+        options.setConfigOptionError,
       ) as never;
     },
   });
@@ -515,6 +520,58 @@ describe("shared ACPX engine runtime behavior", () => {
       { key: "model", value: "gemini-2.5-pro" },
       { key: "effort", value: "high" },
     ]);
+  });
+
+  it("continues with a warning when ACP rejects optional effort config", async () => {
+    const result = await runExecutor(
+      { agent: "gemini", thinkingEffort: "low" },
+      {
+        setConfigOptionError: ({ key }) =>
+          key === "effort"
+            ? new AcpRuntimeError(
+                "ACP_BACKEND_UNSUPPORTED_CONTROL",
+                "ACP session does not advertise config option 'effort'.",
+              )
+            : undefined,
+      },
+    );
+
+    expect(result.configOptions).toEqual([]);
+    expect(result.logs).toContainEqual({
+      stream: "stderr",
+      text: "[paperclip] ACPX gemini does not support the optional effort config; continuing without effort=low.\n",
+    });
+  });
+
+  it("keeps non-effort session config failures fatal", async () => {
+    const execute = createAcpxEngineExecutor({
+      createRuntime: () =>
+        buildRuntime(
+          undefined,
+          undefined,
+          () =>
+            new AcpRuntimeError(
+              "ACP_BACKEND_UNSUPPORTED_CONTROL",
+              "ACP session does not advertise config option 'model'.",
+            ),
+        ) as never,
+    });
+
+    const result = await execute({
+      runId: "run-1",
+      agent: { id: "agent-1", companyId: "company-1" },
+      runtime: {},
+      config: { agent: "gemini", model: "gemini-2.5-pro" },
+      context: {},
+      onLog: async () => {},
+      onMeta: async () => {},
+    } as never);
+
+    expect(result).toMatchObject({
+      exitCode: 1,
+      errorCode: "acpx_session_config_failed",
+      errorMeta: { acpCode: "ACP_BACKEND_UNSUPPORTED_CONTROL" },
+    });
   });
 
   it("does not inject CODEX_CONFIG or session config when Codex overrides are absent", async () => {
