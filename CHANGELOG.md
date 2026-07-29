@@ -7,7 +7,7 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 ## Current State
 
 - Upstream base: `ca92f727c5f7e4a6e5d23d05fef188bee9066b81`
-- Ailtir source: `eb86b60af78f2a31b0c42e8cb09d7b529c17c295`
+- Ailtir source: `ef4fad7c4`
 - Image tag: `not published`
 - Image digest: `not published`
 - Infrastructure commit: `not deployed`
@@ -37,6 +37,10 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-07-29 13:18 UTC
+
+Reconciled downstream worktree provisioning with the rebased CLI source-config requirement; focused entrypoint and workspace runtime tests: 103 passed.
 
 ### 2026-07-29 12:58 UTC
 
