@@ -527,7 +527,7 @@ else
   if [[ -e "$worktree_config_path" || -e "$worktree_env_path" ]]; then
     echo "Existing isolated Paperclip worktree config is stale for this host; regenerating." >&2
   fi
-  if paperclipai_command_available; then
+  if [[ -e "$source_config_path" ]] && paperclipai_command_available; then
     if run_isolated_worktree_init; then
       :
     else
@@ -545,7 +545,7 @@ else
       fi
     fi
   else
-    echo "paperclipai worktree init unavailable; writing isolated fallback config without DB seeding." >&2
+    echo "paperclipai CLI or source config not available in this workspace; writing isolated fallback config without DB seeding." >&2
     write_fallback_worktree_config
   fi
   created_worktree_config=1
