@@ -7,7 +7,7 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 ## Current State
 
 - Upstream base: `ca92f727c5f7e4a6e5d23d05fef188bee9066b81`
-- Ailtir source: `ef4fad7c4`
+- Ailtir source: `82072cc54`
 - Image tag: `not published`
 - Image digest: `not published`
 - Infrastructure commit: `not deployed`
@@ -37,6 +37,10 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-07-29 13:44 UTC
+
+Updated the portability unavailable-model fixture after Sonnet 5 became a supported Bedrock catalog entry; focused regression passed.
 
 ### 2026-07-29 13:18 UTC
 
