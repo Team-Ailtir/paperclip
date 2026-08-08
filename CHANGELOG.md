@@ -7,12 +7,12 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 ## Current State
 
 - Upstream base: `19be4cf9278b70bc151063778a94bf38bfd5c903`
-- Ailtir source: `3e150bf565847652410f676759c32129d54b04a2`
-- Image tag: `not published`
-- Image digest: `not published`
-- Infrastructure commit: `not deployed`
-- Live version: `not deployed`
-- Verification: pending
+- Ailtir source: `a62143b8c019ad1a80ba75f54289c5755ee27dfe`
+- Image tag: `a62143b8c`
+- Image digest: `sha256:4ca9ce044cf034e1e8ffb733c2a4aef4f1f70d20d65495b69f0f1a9afb5dc1af`
+- Infrastructure commit: `ca8a3d8`
+- Live version: `0.3.1-a62143b8c`
+- Verification: Pulumi update 1061 succeeded; ECS task-family-paperclip:43 stabilized; live health and database backup status are ok; task uses CLAUDE_CODE_OAUTH_TOKEN with no Bedrock flags; local CLI 0.3.1-c8feacc93 passes version, help, and global package checks.
 
 ## Active Downstream Patches
 
@@ -36,6 +36,10 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-08-08 13:02 UTC
+
+Deployed subscription-backed ASDL runtime image a62143b8c to production.
 
 ### 2026-08-08 12:33 UTC
 

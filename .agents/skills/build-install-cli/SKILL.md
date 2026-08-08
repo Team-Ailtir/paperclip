@@ -53,16 +53,29 @@ install it globally. Do not publish packages, create commits, or push branches.
    npx -y "$package_manager" exec bash ./scripts/build-npm.sh --skip-typecheck
    ```
 
-4. Pack and install the generated tarball:
+4. The published CLI now loads `@paperclipai/server` at runtime. Convert that
+   one generated registry dependency back to a workspace dependency, then use
+   pnpm's deploy command to materialize a self-contained local installation:
 
    ```sh
-   (cd cli && npm pack --pack-destination "$artifact_dir")
-   npm install -g "$artifact_dir"/paperclipai-*.tgz
+   node -e '
+     const fs = require("fs");
+     const path = "cli/package.json";
+     const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+     pkg.dependencies["@paperclipai/server"] = "workspace:*";
+     fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
+   '
+   npx -y "$package_manager" --filter paperclipai deploy --prod "$install_dir"
+   npm link "$install_dir"
    hash -r
    ```
 
-5. Remove the detached worktree and temporary artifacts. Confirm the main
-   worktree is still clean.
+   Keep `$install_dir` in a stable per-source location outside the repository;
+   the global executable is a symlink to it. With npm 11 on Node 26, `npm link`
+   can return an internal Arborist error after creating the link. Accept that
+   exit only when every verification below passes.
+
+5. Remove the detached worktree. Confirm the main worktree is still clean.
 
 ## Verification
 
@@ -83,15 +96,16 @@ from `command -v` is valid when the version and global package listing agree.
 ## Failure Handling
 
 - Stop if the branch cannot be fast-forwarded or the worktree is not clean.
-- Treat dependency installation or CLI build failures as blocking.
+- Treat dependency installation, CLI build, or pnpm deploy failures as
+  blocking.
 - Some optional native dependencies may report compilation failures and fall
   back to JavaScript. Treat them as warnings only when the package-manager
   command itself exits successfully.
 - If installation succeeds but the executable is not found, run the active
   Node manager's reshim operation, refresh the shell command cache, and retry
   the verification. Do not install the registry package as a fallback.
-- Do not edit manifests or lockfiles to force an installation unless the user
-  explicitly asks for a packaging fix.
+- Do not edit manifests or lockfiles in the main worktree. The generated
+  manifest adjustment above is confined to the detached build worktree.
 
 ## Completion
 
