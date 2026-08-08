@@ -6,8 +6,8 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 <!-- AILTIR-CURRENT:START -->
 ## Current State
 
-- Upstream base: `ca92f727c5f7e4a6e5d23d05fef188bee9066b81`
-- Ailtir source: `82072cc54`
+- Upstream base: `19be4cf9278b70bc151063778a94bf38bfd5c903`
+- Ailtir source: `3e150bf565847652410f676759c32129d54b04a2`
 - Image tag: `not published`
 - Image digest: `not published`
 - Infrastructure commit: `not deployed`
@@ -18,25 +18,28 @@ Upstream Paperclip release notes remain in [`releases/`][releases].
 
 | Patch | Public source | Local commit | Upstream state | First deployed |
 | --- | --- | --- | --- | --- |
-| Ailtir deployment customizations | Ailtir | `ab33a771b` | downstream-only | before 2026-07-22 |
-| CLI parity consolidation | Ailtir | `7f74580f9` | downstream-only | before 2026-07-22 |
-| Ailtir image workflows | Ailtir | `8ea4c6548` | downstream-only | 2026-07-22 |
-| Persisted deployment config | Ailtir | `28890bdd0` | downstream-only | 2026-07-22 |
-| Local CLI workflow | Ailtir | `72812795f` | downstream-only | 2026-07-25 |
-| Downstream maintenance workflow | Ailtir | `b21cf6bce` | downstream-only | 2026-07-25 |
-| Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `fd633c40d` | proposed upstream | 2026-07-25 |
-| Candidate-branch CI gate | Ailtir | `6fe067e9a` | downstream-only | 2026-07-25 |
-| Preserve imported company goals | [upstream PR #10245](https://github.com/paperclipai/paperclip/pull/10245) | `1a17b5f4e` | proposed upstream | 2026-07-25 |
-| Honor imported-agent approval policy | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `8b014c73d` | proposed upstream | 2026-07-25 |
-| Finalize pending agents before approvals | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `0d46440f6` | proposed upstream | 2026-07-25 |
-| Resolve Claude Bedrock defaults | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `41421f48f` | proposed upstream | 2026-07-25 |
-| Resolve Bedrock defaults before hire approval | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `77f0343e1` | proposed upstream | 2026-07-25 |
-| Atomic new-company imports | [upstream PR #10248](https://github.com/paperclipai/paperclip/pull/10248) | `028ccbdff` | proposed upstream | 2026-07-25 |
-| Claude Sonnet 5 static catalog | [upstream PR #10280](https://github.com/paperclipai/paperclip/pull/10280) | `d7c06de6b`, `92a05c1e0` | proposed upstream; head `02c177c24` | pending |
-| Tolerate unsupported ACP effort control | [upstream issue #10175](https://github.com/paperclipai/paperclip/issues/10175), [PR #10436](https://github.com/paperclipai/paperclip/pull/10436) | `eb86b60af` | proposed upstream; head `bef552d90`; CI green; Greptile 5/5 | pending |
+| Ailtir deployment customizations | Ailtir | `1583ce777` | downstream-only | before 2026-07-22 |
+| CLI parity consolidation | Ailtir | `f7a0c520e` | downstream-only | before 2026-07-22 |
+| Ailtir image workflows | Ailtir | `b6c5690f4` | downstream-only | 2026-07-22 |
+| Persisted deployment config | Ailtir | `1a13f2976` | downstream-only | 2026-07-22 |
+| Local CLI workflow | Ailtir | `282d7c2cf` | downstream-only | 2026-07-25 |
+| Downstream maintenance workflow | Ailtir | `0ac28234b` | downstream-only | 2026-07-25 |
+| Preserve Cursor sandbox PATH | [upstream PR #10239](https://github.com/paperclipai/paperclip/pull/10239) | `3546aa2c8` | proposed upstream | 2026-07-25 |
+| Candidate-branch CI gate | Ailtir | `8d1347b65` | downstream-only | 2026-07-25 |
+| Preserve imported company goals | [upstream PR #10245](https://github.com/paperclipai/paperclip/pull/10245) | `4b2407ee4` | proposed upstream | 2026-07-25 |
+| Honor imported-agent approval policy | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `0b3375750` | proposed upstream | 2026-07-25 |
+| Finalize pending agents before approvals | [upstream PR #10246](https://github.com/paperclipai/paperclip/pull/10246) | `32a6add53` | proposed upstream | 2026-07-25 |
+| Resolve Claude Bedrock defaults | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `ea889eb40` | proposed upstream | 2026-07-25 |
+| Resolve Bedrock defaults before hire approval | [upstream PR #10247](https://github.com/paperclipai/paperclip/pull/10247) | `6d815eac8` | proposed upstream | 2026-07-25 |
+| Atomic new-company imports | [upstream PR #10248](https://github.com/paperclipai/paperclip/pull/10248) | `f3ca246f4` | proposed upstream | 2026-07-25 |
+| Tolerate unsupported ACP effort control | [upstream issue #10175](https://github.com/paperclipai/paperclip/issues/10175), [PR #10436](https://github.com/paperclipai/paperclip/pull/10436) | `2103ba2b5` | proposed upstream | pending |
 <!-- AILTIR-CURRENT:END -->
 
 ## History
+
+### 2026-08-08 12:33 UTC
+
+Synchronized the Ailtir patch queue to upstream `19be4cf92`; preserved recovery tag `ailtir-pre-rebase-20260808T122117Z`; Sonnet 5 catalog patches were dropped because upstream now contains them. Local typecheck, stable tests, and build passed; candidate CI run 31257412018 is the promotion gate.
 
 ### 2026-07-29 13:44 UTC
 
